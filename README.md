@@ -54,8 +54,14 @@ bare float, and a number with no provenance cannot enter a recommendation.
 
 ## Quickstart
 
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). No Docker, no cloud
-account, no Databricks.
+Requires [uv](https://docs.astral.sh/uv/). No Docker, no cloud account, no
+Databricks.
+
+The interpreter is pinned in [.python-version](.python-version) to **3.14**,
+which is what the dependency set was resolved and verified against — including
+LightGBM, XGBoost, MLflow, DuckDB and the OR-Tools GLOP solver. `requires-python`
+stays at `>=3.12` so the package remains installable on 3.12; the pin only fixes
+what `uv sync` builds, so everyone gets the same environment.
 
 ```powershell
 git clone <repo> ; cd agentic-revenue-intelligence
