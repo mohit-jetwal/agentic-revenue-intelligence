@@ -1,0 +1,46 @@
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- environments ---
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# --- tool caches ---
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# --- generated data artifacts (code lives in data/generation, output lives here) ---
+data/local/
+*.parquet
+*.duckdb
+*.duckdb.wal
+*.sqlite
+*.sqlite3
+!data/sample/**
+
+# --- ml tracking ---
+mlruns/
+mlartifacts/
+.chroma/
+
+# --- editors / os ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- notebooks ---
+.ipynb_checkpoints/

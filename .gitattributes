@@ -1,0 +1,17 @@
+# Normalise line endings in the repository; check out native on Windows.
+* text=auto
+
+*.py    text eol=lf
+*.toml  text eol=lf
+*.md    text eol=lf
+*.sql   text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.json  text eol=lf
+
+# PowerShell is happier with CRLF on Windows.
+*.ps1   text eol=crlf
+
+*.parquet binary
+*.duckdb  binary
+*.sqlite  binary
