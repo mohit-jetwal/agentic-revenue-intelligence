@@ -11,6 +11,7 @@ dependencies = [
     "pydantic>=2.9",
     "pydantic-settings>=2.5",
     "python-dotenv>=1.0",
+    "pyyaml>=6.0",
     "typer>=0.12",
     "structlog>=24.4",
     "tenacity>=9.0",
@@ -41,6 +42,7 @@ dependencies = [
 [project.optional-dependencies]
 ui = ["streamlit>=1.39"]
 rag = ["chromadb>=0.5"]
+notebooks = ["jupyter>=1.1", "matplotlib>=3.9", "seaborn>=0.13"]
 dev = [
     "pytest>=8.3",
     "pytest-cov>=5.0",
@@ -49,6 +51,7 @@ dev = [
     "mypy>=1.11",
     "bandit>=1.7",
     "pandas-stubs>=2.2",
+    "types-pyyaml>=6.0",
 ]
 
 [project.scripts]
@@ -110,6 +113,8 @@ markers = [
     "integration: tests that exercise the API or on-disk artifacts",
     "models: ML model behaviour tests",
     "agents: agent / workflow behaviour tests",
+    "data: synthetic data generation and invariant tests",
+    "statistical: relationship-recovery tests; slower, fit regressions on generated data",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
 

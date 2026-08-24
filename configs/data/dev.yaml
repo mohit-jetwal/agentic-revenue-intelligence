@@ -1,0 +1,290 @@
+# =============================================================================
+# Development dataset profile
+#
+# Sized for STATISTICAL POWER, not for a round row count. ~20 stores per product
+# x 1,096 days = ~21,900 observations per product, which is what makes per-product
+# elasticity recoverable with store and time fixed effects.
+#
+#   uv run ari generate-data --profile dev --seed 42
+#
+# Every value here is a simulation parameter. Environment configuration (paths,
+# secrets) lives in .env - a different concern with a different lifecycle.
+# =============================================================================
+
+dataset_version: "v1.0"
+scenario_version: "v1"
+seed: 42
+
+# --- scale -------------------------------------------------------------------
+scale:
+  products: 300
+  stores: 200
+  customers: 30000
+  competitors: 3
+  # Each product is listed in this many stores (the panel is products x listings,
+  # not products x all stores). Drives total row count directly.
+  stores_per_product_mean: 20
+  stores_per_product_std: 6
+  # Fraction of daily panel rows expanded into individual transactions.
+  # NOTE the fan-out: one panel row becomes ~19 baskets on average, because a
+  # store-day selling 30 units of a SKU really is ~19 separate purchases. So
+  # 0.010 x ~5.5M sellable rows x ~19 lands near 1M transactions, which is the
+  # row count brief section 21 asks of the `sales` table.
+  transaction_sample_rate: 0.010
+
+# --- time --------------------------------------------------------------------
+time:
+  start_date: "2023-01-01"
+  end_date: "2025-12-31"
+  # Reserved for forecasting demos in later steps; generated but written separately.
+  holdout_start_date: "2026-01-01"
+  holdout_end_date: "2026-06-30"
+  generate_holdout: true
+  geography: "IN"
+
+# --- product hierarchy -------------------------------------------------------
+# weight = share of the catalogue; base_demand = mean daily units per store-listing
+# before any effect is applied; elasticity_range = own-price elasticity band.
+categories:
+  Beverages:
+    weight: 0.18
+    subcategories: [Carbonated, Juice, Water, Energy, Tea & Coffee]
+    base_demand: [8.0, 45.0]
+    unit_cost: [12.0, 90.0]
+    margin: [0.28, 0.45]
+    elasticity_range: [-2.4, -1.4]     # discretionary, highly substitutable
+    seasonal_amplitude: 0.28
+    seasonal_peak_month: 5             # summer peak
+  Snacks:
+    weight: 0.16
+    subcategories: [Chips, Biscuits, Namkeen, Chocolate, Nuts]
+    base_demand: [10.0, 50.0]
+    unit_cost: [8.0, 70.0]
+    margin: [0.30, 0.48]
+    elasticity_range: [-2.2, -1.3]
+    seasonal_amplitude: 0.18
+    seasonal_peak_month: 10            # festive
+  Personal Care:
+    weight: 0.15
+    subcategories: [Shampoo, Soap, Oral Care, Skin Care, Deodorant]
+    base_demand: [4.0, 22.0]
+    unit_cost: [25.0, 220.0]
+    margin: [0.35, 0.55]
+    elasticity_range: [-1.8, -0.9]
+    seasonal_amplitude: 0.12
+    seasonal_peak_month: 10
+  Home Care:
+    weight: 0.13
+    subcategories: [Detergent, Dishwash, Floor Cleaner, Air Freshener]
+    base_demand: [5.0, 25.0]
+    unit_cost: [30.0, 180.0]
+    margin: [0.32, 0.50]
+    elasticity_range: [-1.6, -0.8]
+    seasonal_amplitude: 0.15
+    seasonal_peak_month: 7             # monsoon
+  Packaged Food:
+    weight: 0.15
+    subcategories: [Instant Noodles, Sauces, Ready Meals, Spices, Edible Oil]
+    base_demand: [6.0, 30.0]
+    unit_cost: [20.0, 200.0]
+    margin: [0.22, 0.38]
+    elasticity_range: [-1.5, -0.7]     # staples, inelastic
+    seasonal_amplitude: 0.10
+    seasonal_peak_month: 11
+  Dairy:
+    weight: 0.13
+    subcategories: [Milk, Curd, Cheese, Butter, Paneer]
+    base_demand: [12.0, 55.0]
+    unit_cost: [18.0, 130.0]
+    margin: [0.18, 0.32]
+    elasticity_range: [-1.3, -0.6]     # staple, most inelastic
+    seasonal_amplitude: 0.14
+    seasonal_peak_month: 4
+  Health & Wellness:
+    weight: 0.10
+    subcategories: [Vitamins, Protein, Ayurvedic, Immunity]
+    base_demand: [2.0, 12.0]
+    unit_cost: [80.0, 600.0]
+    margin: [0.40, 0.62]
+    elasticity_range: [-1.7, -0.8]
+    seasonal_amplitude: 0.20
+    seasonal_peak_month: 1             # new-year resolutions
+
+brands_per_category: [4, 7]
+pack_sizes: ["100g", "200g", "500g", "1kg", "250ml", "500ml", "1L", "2L", "6-pack"]
+
+# Products launched or discontinued mid-history (Scenario J needs launches).
+lifecycle:
+  launched_mid_history_pct: 0.08
+  discontinued_pct: 0.04
+  launch_ramp_days: 120                # gradual distribution build
+
+# --- product relationships ---------------------------------------------------
+# Cross-price coefficients are drawn from these bands. Positive => substitutes
+# (their price up, our demand up). Negative => complements.
+relationships:
+  strong_substitute_pairs_per_category: 3
+  weak_substitute_pairs_per_category: 6
+  complement_pairs_per_category: 2
+  cross_category_complement_pairs: 12
+  strength:
+    strong_substitute: [0.30, 0.60]
+    weak_substitute: [0.05, 0.18]
+    strong_complement: [-0.35, -0.20]
+    weak_complement: [-0.15, -0.05]
+
+# --- stores ------------------------------------------------------------------
+stores:
+  channels:
+    Hypermarket:   { weight: 0.12, size_sqft: [25000, 60000], demand_scale: [2.2, 3.6] }
+    Supermarket:   { weight: 0.30, size_sqft: [6000, 20000],  demand_scale: [1.0, 1.8] }
+    Convenience:   { weight: 0.34, size_sqft: [400, 2500],    demand_scale: [0.30, 0.70] }
+    E-commerce:    { weight: 0.10, size_sqft: [0, 0],         demand_scale: [1.4, 3.0] }
+    Wholesale:     { weight: 0.14, size_sqft: [15000, 45000], demand_scale: [1.8, 3.2] }
+  regions:
+    North:   { weight: 0.24, demand_multiplier: 1.08, states: [Delhi, Punjab, Haryana, Uttar Pradesh, Rajasthan] }
+    South:   { weight: 0.26, demand_multiplier: 1.12, states: [Karnataka, Tamil Nadu, Telangana, Kerala, Andhra Pradesh] }
+    East:    { weight: 0.16, demand_multiplier: 0.88, states: [West Bengal, Odisha, Bihar, Jharkhand, Assam] }
+    West:    { weight: 0.22, demand_multiplier: 1.15, states: [Maharashtra, Gujarat, Goa] }
+    Central: { weight: 0.12, demand_multiplier: 0.82, states: [Madhya Pradesh, Chhattisgarh] }
+  opened_mid_history_pct: 0.06
+
+# --- customers ---------------------------------------------------------------
+# price_sensitivity multiplies a product's own-price elasticity. Value shoppers
+# feel a price rise harder than Premium ones; a store's mix therefore shifts its
+# effective elasticity. This is how segments reach a panel with no customer axis.
+customers:
+  segments:
+    Value:      { weight: 0.28, price_sensitivity: 1.35, promo_responsiveness: 1.40 }
+    Regular:    { weight: 0.32, price_sensitivity: 1.00, promo_responsiveness: 1.00 }
+    Premium:    { weight: 0.14, price_sensitivity: 0.62, promo_responsiveness: 0.65 }
+    Loyal:      { weight: 0.16, price_sensitivity: 0.78, promo_responsiveness: 0.85 }
+    Occasional: { weight: 0.10, price_sensitivity: 1.12, promo_responsiveness: 1.20 }
+  loyalty_tiers: [Bronze, Silver, Gold, Platinum]
+  loyalty_weights: [0.46, 0.30, 0.17, 0.07]
+  acquisition_channels: [Store Walk-in, Online, Referral, Campaign, Partner]
+
+# --- demand simulation -------------------------------------------------------
+demand:
+  # Annual compound trend applied per category, drawn from this band.
+  trend_annual: [-0.06, 0.12]
+  # Day-of-week multipliers, Monday..Sunday. Weekend retail lift.
+  day_of_week: [0.88, 0.86, 0.92, 0.98, 1.18, 1.34, 1.12]
+  holiday_multiplier: [1.15, 1.45]
+  festival_multiplier: [1.35, 2.10]
+  # NegBinomial dispersion: lower => more over-dispersed. Sales are counts, and
+  # real POS data is over-dispersed relative to Poisson.
+  negbinom_dispersion: [3.0, 9.0]
+  # Residual log-normal noise on the mean, on top of the count draw.
+  noise_sigma: 0.16
+  # Occasional unexplained spikes/dips, so the data is not unrealistically clean.
+  anomaly_rate: 0.004
+  anomaly_magnitude: [0.45, 2.30]
+
+# --- pricing -----------------------------------------------------------------
+pricing:
+  # Regular price moves in steps, not daily. Real price files are event-based.
+  price_changes_per_year: [2, 5]
+  price_change_magnitude: [-0.05, 0.09]     # asymmetric: rises more common
+  regional_price_spread: 0.06               # +/- around national base price
+  # CONFOUNDING (1): managers price into anticipated demand. Biases naive OLS
+  # toward zero. The cure is fixed effects or the cost instrument below.
+  endogeneity_strength: 0.45
+  # CONFOUNDING (3): a fraction of changes are randomised price tests, tagged in
+  # price_change_reason. Gives a clean exogenous subset for identification.
+  randomised_test_fraction: 0.18
+  # CONFOUNDING (2): commodity cost index shifts price but not demand -> a valid
+  # instrument for 2SLS in Step 8.
+  cost_index_volatility: 0.09
+  cost_passthrough: 0.55
+
+# --- competitor --------------------------------------------------------------
+competitor:
+  price_index_vs_ours: [0.90, 1.12]
+  price_changes_per_year: [4, 9]
+  promotion_frequency: 0.10
+  # gamma in the demand equation: competitor price up => our demand up.
+  cross_sensitivity: [0.15, 0.55]
+  # CONFOUNDING (5): competitor prices partly track the shared cost index.
+  cost_index_correlation: 0.40
+
+# --- promotions --------------------------------------------------------------
+# uplift = a * (1 - exp(-b * discount)), additive in logs. Calibrated so
+# 10% -> ~12% uplift, 20% -> ~22%, 30% -> ~28%: diminishing returns by construction.
+promotions:
+  events_per_product_per_year: [3, 9]
+  duration_days: [5, 21]
+  discount_depth: [0.05, 0.40]
+  types:
+    Price Discount: { weight: 0.34, a: [0.30, 0.42], b: 4.0, spend_per_unit: 0.0,  display: 0.15, bundle: 0.0 }
+    Buy One Get One: { weight: 0.16, a: [0.42, 0.62], b: 3.2, spend_per_unit: 0.10, display: 0.25, bundle: 0.0 }
+    Bundle:         { weight: 0.12, a: [0.22, 0.34], b: 3.6, spend_per_unit: 0.06, display: 0.20, bundle: 1.0 }
+    Display:        { weight: 0.14, a: [0.14, 0.24], b: 2.4, spend_per_unit: 0.18, display: 1.0,  bundle: 0.0 }
+    Coupon:         { weight: 0.13, a: [0.16, 0.28], b: 3.8, spend_per_unit: 0.08, display: 0.05, bundle: 0.0 }
+    Loyalty Offer:  { weight: 0.11, a: [0.12, 0.26], b: 4.2, spend_per_unit: 0.05, display: 0.02, bundle: 0.0 }
+  display_lift: 0.12
+  bundle_lift: 0.08
+  # Pantry loading: buyers pull purchases forward, so demand dips afterwards.
+  # This is exactly why naive during-vs-before uplift overstates incrementality.
+  pull_forward_fraction: 0.32
+  pull_forward_decay_days: 10
+  # CONFOUNDING (4): promos skew toward products whose baseline is already soft.
+  targeting_strength: 0.40
+  # Fixed cost per promotion event, on top of per-unit spend.
+  fixed_spend: [15000.0, 220000.0]
+
+# --- trade promotions --------------------------------------------------------
+trade_promotions:
+  annual_budget: 100000000.0        # Rs 100M
+  retailers: [Metro Retail, FreshMart, ValueBazaar, QuickShop, GreenGrocer, UrbanKart]
+  events_per_retailer_per_year: [12, 30]
+  planned_vs_actual_spend_variance: 0.14
+  expected_vs_actual_uplift_variance: 0.30
+
+# --- inventory ---------------------------------------------------------------
+inventory:
+  # Order-up-to policy: cover this many days of recent mean demand.
+  target_cover_days: [10, 25]
+  reorder_point_days: [4, 9]
+  lead_time_days: [2, 7]
+  # Baseline supply failures, independent of the injected stockout scenarios.
+  random_stockout_rate: 0.018
+  initial_cover_days: 14
+
+# --- scenarios A-J -----------------------------------------------------------
+# Injected at named products/stores/windows and registered in
+# ground_truth/scenario_config.json for later validation and Step 21 evals.
+scenarios:
+  enabled: true
+  price_increase:      { products: 3, magnitude: 0.08, duration_days: 120 }
+  successful_promo:    { products: 3, discount: 0.15, duration_days: 21 }
+  bad_promo:           { products: 3, discount: 0.38, duration_days: 21 }
+  # Duration must exceed inventory.target_cover_days: the scenario suppresses
+  # deliveries, so the store sells down existing stock before it runs dry. A
+  # window shorter than the cover would leave no observable stockout at all.
+  stockout:            { products: 4, stores_fraction: 0.55, duration_days: 45 }
+  competitor_price_cut: { products: 4, magnitude: -0.12, duration_days: 75 }
+  regional_shock:      { region: North, magnitude: -0.22, duration_days: 90 }
+
+# --- data quality injection (bronze layer only) ------------------------------
+# Gold stays pristine so Steps 4-11 are not fighting nulls in every model.
+data_quality:
+  enabled: true
+  missing_product_id: 0.001
+  missing_store_id: 0.0005
+  duplicate_transactions: 0.0005
+  invalid_price: 0.001
+  negative_quantity: 0.0002
+  invalid_discount: 0.0005
+  orphan_promotion_id: 0.0005
+  malformed_date: 0.0002
+  duplicate_promotions: 0.0002
+
+# --- output ------------------------------------------------------------------
+output:
+  # Rows per month-partition chunk; the full panel is never held in memory.
+  chunk_months: 3
+  write_bronze: true
+  write_samples: true
+  sample_rows: 1000
+  compression: "zstd"

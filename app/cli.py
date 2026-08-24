@@ -84,6 +84,75 @@ def tools() -> None:
         typer.echo(f"{name:<28} [{spec.permission}] {spec.description.splitlines()[0]}")
 
 
+@app.command("generate-data")
+def generate_data(
+    profile: str = typer.Option("dev", help="Dataset profile: smoke, dev or stress."),
+    seed: int | None = typer.Option(None, help="Override the profile's random seed."),
+    products: int | None = typer.Option(None, help="Override the product count."),
+    stores: int | None = typer.Option(None, help="Override the store count."),
+    customers: int | None = typer.Option(None, help="Override the customer count."),
+) -> None:
+    """Generate the synthetic CPG/Retail dataset."""
+    from data.generation.pipeline import generate_dataset
+
+    configure_logging()
+    overrides = {
+        "scale.products": products,
+        "scale.stores": stores,
+        "scale.customers": customers,
+    }
+    result = generate_dataset(profile, seed=seed, overrides=overrides)
+    typer.echo("")
+    typer.echo(result.summary())
+    typer.echo("")
+    typer.echo(f"gold content hash: {result.gold_hash[:16]}")
+    typer.echo("Next: uv run ari validate-data --profile " + profile)
+
+
+@app.command("validate-data")
+def validate_data(
+    profile: str = typer.Option("dev", help="Profile the dataset was generated with."),
+    sample_rows: int = typer.Option(
+        400_000, help="Rows of the large facts to load; 0 loads everything."
+    ),
+) -> None:
+    """Validate business invariants and relationship recovery.
+
+    Exits non-zero when an ``error``-severity invariant fails or an intended
+    relationship is missing, so this can gate a pipeline.
+    """
+    from data.validation.report import validate_dataset, write_report
+
+    configure_logging()
+    settings = get_settings()
+    root = settings.resolve(settings.data.parquet_root).parent
+
+    report = validate_dataset(root, sample_rows=sample_rows or None)
+    markdown_path, json_path = write_report(report, root)
+
+    summary = report.checks.summary()
+    typer.echo(
+        f"invariants   : {summary['passed']}/{summary['total']} passed, "
+        f"{summary['failed']} failed, {summary['warnings']} warnings"
+    )
+    passed_relationships = sum(1 for r in report.relationships if r.passed)
+    typer.echo(f"relationships: {passed_relationships}/{len(report.relationships)} passed")
+    typer.echo("")
+
+    for check in report.checks.failures + report.checks.warnings:
+        typer.echo(f"  [{check.status}] {check.name} ({check.table}): {check.message}")
+    for relationship in report.failed_relationships:
+        typer.echo(
+            f"  [FAIL] {relationship.name}: observed={relationship.observed} "
+            f"expected={relationship.expected}"
+        )
+
+    typer.echo("")
+    typer.echo(f"report: {markdown_path}")
+    typer.echo(f"json  : {json_path}")
+    raise typer.Exit(code=0 if report.passed else 1)
+
+
 @app.command()
 def prompts() -> None:
     """List available prompt versions."""

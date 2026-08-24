@@ -4,9 +4,10 @@ Agentic decision intelligence for CPG/Retail revenue, pricing and promotion
 management. Claude plans, selects tools, interprets evidence and re-plans.
 Deterministic ML, statistical and optimisation models produce every number.
 
-> **Status: Stage 1, Step 1 — project skeleton.**
-> The application starts, `/health` is live, and the architectural seams are in
-> place. No data, models or agents yet. See [Roadmap](#roadmap).
+> **Status: Stage 1, Step 2 — synthetic data foundation.**
+> The skeleton runs and the dataset generator produces a **causally simulated**
+> CPG/Retail dataset whose relationships are provably recoverable. No models or
+> agents yet. See [Roadmap](#roadmap).
 
 ---
 
@@ -65,9 +66,13 @@ what `uv sync` builds, so everyone gets the same environment.
 
 ```powershell
 git clone <repo> ; cd agentic-revenue-intelligence
-.\tasks.ps1 setup          # uv sync --all-extras, creates .env
-.\tasks.ps1 check          # ruff + mypy + pytest
-.\tasks.ps1 api            # http://localhost:8000/docs
+.\tasks.ps1 setup                              # uv sync --all-extras, creates .env
+.\tasks.ps1 check                              # ruff + mypy + pytest
+
+uv run ari generate-data --profile dev --seed 42   # ~55s, 23.6M rows
+uv run ari validate-data --profile dev             # invariants + relationship recovery
+
+.\tasks.ps1 api                                # http://localhost:8000/docs
 ```
 
 Without the task runner:
@@ -89,7 +94,65 @@ uv run streamlit run app/ui/streamlit_app.py
 
 `/health` reports **degraded** on a fresh checkout. That is correct: no data has
 been generated and no API key is set. It reports which dependency is missing and
-which step supplies it.
+which step supplies it — and flips `data_repository` to `ok` once you generate.
+
+---
+
+## The dataset
+
+Generated from a **structural causal model with hidden ground-truth parameters**,
+not by sampling columns independently. Elasticities, cross-price coefficients and
+promotion response curves are drawn *first*, written to a `ground_truth/`
+directory no model or agent can reach, and only then used to simulate sales.
+
+That inversion is what makes the whole project falsifiable. Instead of "the model
+produced −1.38, is that right?" with no way to answer, Step 8 will compare −1.38
+against a known −1.42 and report the error.
+
+| Profile | Products | Stores | `sales_daily` | Total rows | Time |
+|---|---|---|---|---|---|
+| `smoke` | 40 | 30 | 354K | 1.3M | ~4s |
+| `dev` | 300 | 200 | 6.7M | 23.6M | ~55s |
+| `stress` | 500 | 1,000 | ~44M | ~150M | on demand |
+
+### What the data proves about itself
+
+`uv run ari validate-data` runs 32 business invariants and 12 relationship tests.
+At dev scale, seed 42:
+
+| Test | Result |
+|---|---|
+| Elasticity recovered (panel FE, store + month) | **7.1%** median error vs truth |
+| Naive OLS, no controls | **28.4%** median error — 4× worse |
+| Cross-price signs (own price controlled) | **7/7** correct |
+| Competitor effect | **+1.21** controlled for own price |
+| Stockout suppression | **71.6%** inside injected windows |
+| Censoring when in stock | **0.0%** |
+
+The second row is the one that matters as much as the first. If an uncontrolled
+regression recovered truth just as well, the data would be too easy and Step 8's
+careful specification would be theatre.
+
+Six confounders are deliberate: price endogeneity, cost pass-through (which
+doubles as a **valid instrument**), randomised price tests (a clean
+identification subset), promotion targeting, competitor–cost correlation, and
+endogenous stockouts. Full detail in
+[docs/data/simulation-design.md](docs/data/simulation-design.md); table and column
+reference in [docs/data/data-dictionary.md](docs/data/data-dictionary.md).
+
+### Layers
+
+```
+data/local/
+├── gold/          clean, model-ready — what every model reads
+├── bronze/        same tables + injected defects, for the DQ framework
+├── ground_truth/  hidden parameters + true uncensored demand — unreachable
+└── manifest.json  seed, config hash, row counts, injected-defect tallies
+data/sample/       ~1,000-row CSV extracts, committed for browsing
+```
+
+Gold stays pristine so Steps 4–11 aren't fighting nulls in every model; bronze
+gives the quality checks real defects to catch.
 
 ---
 
@@ -172,12 +235,17 @@ app/
 ml/                 8 model interfaces (baseline, forecasting, uplift,
                     elasticity, cross-price, both optimisers, scenario)
 data/
-├── generation/     synthetic data generator (Step 2)
+├── generation/     causal simulation: generators, scenarios, ground truth
+├── validation/     business invariants + relationship-recovery tests
 ├── repositories/   Local (DuckDB/Parquet) + Databricks implementations
+├── sample/         committed CSV extracts
 └── local/          generated output — git-ignored
+configs/data/       smoke · dev · stress dataset profiles (YAML)
 databricks/         Stage 2. See databricks/README.md
 prompts/            versioned prompts: <agent>/<version>.md
-tests/              unit · integration · models · agents
+notebooks/          data_validation/01_data_validation_eda.ipynb
+docs/data/          data dictionary · simulation design
+tests/              unit · integration · data · statistical
 ```
 
 `app/`, `ml/` and `data/` are top-level packages per the project specification.
@@ -229,6 +297,15 @@ Stated plainly, because "why isn't X here" is a fair question:
 - **Empty tool registry.** Tools are registered in Step 13, once Steps 4–11
   supply the models. A tool becoming callable by an agent should be a decision
   someone made, not a side effect of a file existing.
+- **No Pandera or Great Expectations.** Most checks here are business invariants
+  (`opening + received − sold = closing`) that schema libraries express awkwardly,
+  and both are a large dependency for ~150 lines of arithmetic. A genuine
+  trade-off — Pandera is the more conventional answer, and the right next step if
+  the check set outgrows simple predicates.
+- **Dataset config is YAML validated by Pydantic**, not pydantic-settings. ~100
+  nested business parameters cannot be expressed as environment variables, and a
+  change to elasticity bands must be visible in a diff. Environment config stays
+  in `.env`; the two have different lifecycles and are deliberately not merged.
 - **Stage 2 classes are declared but raise.** Writing the signatures now proves
   the interfaces are satisfiable by a warehouse-backed store and surfaces any
   place the ABC leaked a local-only assumption.
@@ -237,7 +314,7 @@ Stated plainly, because "why isn't X here" is a fair question:
 
 ## Roadmap
 
-**Stage 1 — local MVP.** 1 skeleton ✅ · 2 synthetic data · 3 repository ·
+**Stage 1 — local MVP.** 1 skeleton ✅ · 2 synthetic data ✅ · 3 repository ·
 4 baseline · 5 forecasting · 6 promo uplift · 7 trade-promo optimisation ·
 8 price elasticity · 9 cross-price elasticity · 10 price optimisation ·
 11 scenario engine · 12 MLflow · 13 tool interfaces · 14 Claude ·
@@ -245,17 +322,18 @@ Stated plainly, because "why isn't X here" is a fair question:
 19 FastAPI · 20 Streamlit · 21 agent evaluation · 22 Docker ·
 23 end-to-end validation
 
+Step 3 note: `LocalDataRepository`'s read path was pulled forward into Step 2 —
+statistical validation needed it, and §36 requires the data to be reachable
+through the abstraction. Step 3 adds the SQLite application-state store, indexes
+and the SQL security layer.
+
 **Stage 2 — Databricks production.** Unity Catalog · Bronze/Silver/Gold ·
 feature engineering · Databricks MLflow · Model Registry · Model Serving ·
 Databricks SQL tools · Vector Search · production agents · security ·
 monitoring · CI/CD
 
-Step 2 note carried forward: the synthetic data must come from a **causal
-simulation with known underlying parameters**, not independently sampled
-columns. Price must actually move demand, stockouts must actually censor it, a
-substitute's price must actually shift volume. Without that, every model in
-Steps 4–11 is unfalsifiable; with it, each can be tested against the parameter
-it is meant to recover. That test is the difference between a demo and evidence.
+Every model in Steps 4–11 will be scored against `ground_truth/`, using the same
+method the Step 2 validation suite already applies to itself.
 
 ---
 

@@ -37,6 +37,25 @@ from app.config.settings import (
 from app.observability.metrics import METRICS
 from app.services.container import Container, set_container
 
+# Dataset fixtures live in their own module but must be visible to every test
+# package, so they are re-exported here. `noqa: F401` because pytest collects
+# them by name from the conftest namespace rather than by direct reference.
+from tests.dataset_fixtures import (  # noqa: F401
+    SMOKE_SEED,
+    inventory,
+    products,
+    promotions,
+    sales,
+    second_run,
+    smoke_config,
+    smoke_ground_truth,
+    smoke_latent,
+    smoke_result,
+    smoke_root,
+    smoke_tables,
+    stores,
+)
+
 _ENV_PREFIXES = (
     "APP__",
     "LLM__",

@@ -1,0 +1,201 @@
+store_id,store_name,store_type,channel,region,state,city,store_size_sqft,opening_date
+S00001,FreshMart Chhattisgarh Plaza,Flagship,Hypermarket,Central,Chhattisgarh,Chhattisgarh Plaza,56682,2023-01-01
+S00002,UrbanKart Madhya South,Standard,Convenience,Central,Madhya Pradesh,Madhya South,572,2023-01-01
+S00003,FreshMart Rajasthan South,Flagship,Hypermarket,North,Rajasthan,Rajasthan South,31534,2023-01-01
+S00004,UrbanKart Gujarat Park,Standard,Supermarket,West,Gujarat,Gujarat Park,9898,2023-01-01
+S00005,QuickShop Goa Plaza,Standard,Convenience,West,Goa,Goa Plaza,2154,2023-01-01
+S00006,Metro Madhya Market,Standard,Supermarket,Central,Madhya Pradesh,Madhya Market,17672,2023-01-01
+S00007,UrbanKart Haryana East,Standard,Convenience,North,Haryana,Haryana East,1188,2023-01-01
+S00008,UrbanKart Delhi Plaza,Standard,Convenience,North,Delhi,Delhi Plaza,966,2023-01-01
+S00009,Metro Jharkhand Central,Standard,Convenience,East,Jharkhand,Jharkhand Central,2241,2023-01-01
+S00010,FreshMart Rajasthan West,Standard,Convenience,North,Rajasthan,Rajasthan West,1923,2023-01-01
+S00011,UrbanKart Haryana South,Flagship,Wholesale,North,Haryana,Haryana South,39706,2023-01-01
+S00012,QuickShop Tamil Market,Standard,Supermarket,South,Tamil Nadu,Tamil Market,19531,2023-01-01
+S00013,Metro Jharkhand Central,Standard,Convenience,East,Jharkhand,Jharkhand Central,1283,2023-01-01
+S00014,UrbanKart Goa Market,Standard,Supermarket,West,Goa,Goa Market,11914,2023-01-01
+S00015,UrbanKart Rajasthan Central,Standard,E-commerce,North,Rajasthan,Rajasthan Central,0,2023-01-01
+S00016,FreshMart Andhra West,Standard,Convenience,South,Andhra Pradesh,Andhra West,1075,2024-03-23
+S00017,FreshMart Tamil Plaza,Standard,Supermarket,South,Tamil Nadu,Tamil Plaza,14633,2023-01-01
+S00018,GreenGrocer Tamil Plaza,Standard,Supermarket,South,Tamil Nadu,Tamil Plaza,18127,2023-01-01
+S00019,GreenGrocer Tamil South,Standard,Supermarket,South,Tamil Nadu,Tamil South,17046,2023-01-01
+S00020,GreenGrocer Assam East,Standard,Convenience,East,Assam,Assam East,567,2023-01-01
+S00021,Metro Karnataka North,Flagship,Hypermarket,South,Karnataka,Karnataka North,43612,2023-01-01
+S00022,GreenGrocer Assam North,Flagship,Hypermarket,East,Assam,Assam North,42766,2023-01-01
+S00023,FreshMart Rajasthan South,Standard,E-commerce,North,Rajasthan,Rajasthan South,0,2023-01-01
+S00024,Metro Karnataka South,Standard,E-commerce,South,Karnataka,Karnataka South,0,2023-01-01
+S00025,ValueBazaar Telangana East,Standard,E-commerce,South,Telangana,Telangana East,1,2024-02-20
+S00026,ValueBazaar Haryana Market,Flagship,Hypermarket,North,Haryana,Haryana Market,53564,2023-01-01
+S00027,FreshMart Telangana East,Standard,E-commerce,South,Telangana,Telangana East,1,2023-01-01
+S00028,QuickShop Uttar Park,Standard,Supermarket,North,Uttar Pradesh,Uttar Park,14918,2023-01-01
+S00029,FreshMart Delhi Park,Standard,E-commerce,North,Delhi,Delhi Park,0,2023-01-01
+S00030,QuickShop Delhi North,Flagship,Wholesale,North,Delhi,Delhi North,23458,2023-01-01
+S00031,GreenGrocer Gujarat East,Standard,Convenience,West,Gujarat,Gujarat East,1741,2023-01-01
+S00032,QuickShop Maharashtra Plaza,Standard,Convenience,West,Maharashtra,Maharashtra Plaza,1606,2023-01-01
+S00033,GreenGrocer Bihar Park,Standard,Supermarket,East,Bihar,Bihar Park,13809,2023-04-26
+S00034,ValueBazaar Kerala North,Flagship,Wholesale,South,Kerala,Kerala North,33705,2023-01-01
+S00035,Metro Odisha Market,Standard,Supermarket,East,Odisha,Odisha Market,14259,2023-01-01
+S00036,GreenGrocer Rajasthan Park,Standard,E-commerce,North,Rajasthan,Rajasthan Park,0,2023-01-01
+S00037,Metro Telangana Plaza,Standard,Supermarket,South,Telangana,Telangana Plaza,18763,2023-01-01
+S00038,UrbanKart Jharkhand Park,Standard,Supermarket,East,Jharkhand,Jharkhand Park,9696,2023-01-01
+S00039,GreenGrocer West Junction,Flagship,Wholesale,East,West Bengal,West Junction,20174,2023-01-01
+S00040,UrbanKart Telangana Plaza,Standard,Convenience,South,Telangana,Telangana Plaza,926,2023-01-01
+S00041,Metro Goa South,Standard,Convenience,West,Goa,Goa South,874,2023-01-01
+S00042,UrbanKart Punjab Plaza,Standard,Convenience,North,Punjab,Punjab Plaza,692,2023-01-01
+S00043,UrbanKart Gujarat West,Flagship,Hypermarket,West,Gujarat,Gujarat West,47747,2023-10-08
+S00044,GreenGrocer Andhra West,Standard,Supermarket,South,Andhra Pradesh,Andhra West,13447,2023-01-01
+S00045,UrbanKart Delhi Park,Standard,Convenience,North,Delhi,Delhi Park,1575,2023-01-01
+S00046,UrbanKart Delhi Park,Standard,Supermarket,North,Delhi,Delhi Park,7700,2023-01-01
+S00047,FreshMart Tamil South,Standard,E-commerce,South,Tamil Nadu,Tamil South,1,2023-01-01
+S00048,QuickShop Haryana Plaza,Standard,Supermarket,North,Haryana,Haryana Plaza,8124,2023-01-01
+S00049,Metro Gujarat West,Standard,Convenience,West,Gujarat,Gujarat West,746,2023-01-01
+S00050,QuickShop Punjab North,Standard,Convenience,North,Punjab,Punjab North,1511,2023-01-01
+S00051,QuickShop Punjab Park,Standard,E-commerce,North,Punjab,Punjab Park,1,2023-01-01
+S00052,ValueBazaar Goa Central,Standard,Supermarket,West,Goa,Goa Central,15661,2023-04-15
+S00053,FreshMart Kerala Market,Flagship,Wholesale,South,Kerala,Kerala Market,39665,2023-01-01
+S00054,Metro Kerala Market,Standard,Supermarket,South,Kerala,Kerala Market,19016,2023-01-01
+S00055,FreshMart Karnataka West,Standard,Supermarket,South,Karnataka,Karnataka West,6411,2023-01-01
+S00056,GreenGrocer Delhi Plaza,Flagship,Wholesale,North,Delhi,Delhi Plaza,40994,2023-01-01
+S00057,FreshMart West Central,Standard,Convenience,East,West Bengal,West Central,591,2023-01-01
+S00058,QuickShop Karnataka South,Standard,Convenience,South,Karnataka,Karnataka South,1891,2023-01-01
+S00059,GreenGrocer Punjab Park,Standard,Convenience,North,Punjab,Punjab Park,1426,2023-01-01
+S00060,Metro Chhattisgarh Market,Standard,E-commerce,Central,Chhattisgarh,Chhattisgarh Market,1,2023-01-01
+S00061,QuickShop Odisha Market,Standard,Convenience,East,Odisha,Odisha Market,1962,2023-01-01
+S00062,Metro Haryana Park,Flagship,Hypermarket,North,Haryana,Haryana Park,58236,2024-06-18
+S00063,UrbanKart Karnataka Central,Standard,Convenience,South,Karnataka,Karnataka Central,1720,2023-01-01
+S00064,Metro Assam South,Standard,Convenience,East,Assam,Assam South,876,2023-01-01
+S00065,UrbanKart Tamil South,Standard,Convenience,South,Tamil Nadu,Tamil South,1387,2023-01-01
+S00066,UrbanKart Haryana West,Standard,Convenience,North,Haryana,Haryana West,2384,2023-01-01
+S00067,Metro Uttar West,Standard,Supermarket,North,Uttar Pradesh,Uttar West,9051,2023-01-01
+S00068,ValueBazaar Andhra Central,Standard,E-commerce,South,Andhra Pradesh,Andhra Central,0,2023-01-01
+S00069,UrbanKart Goa East,Flagship,Wholesale,West,Goa,Goa East,20461,2023-01-01
+S00070,QuickShop Rajasthan Park,Standard,E-commerce,North,Rajasthan,Rajasthan Park,1,2023-01-01
+S00071,FreshMart Jharkhand West,Flagship,Wholesale,East,Jharkhand,Jharkhand West,35912,2023-02-06
+S00072,FreshMart Haryana East,Standard,Supermarket,North,Haryana,Haryana East,19958,2023-09-14
+S00073,Metro Andhra North,Standard,Convenience,South,Andhra Pradesh,Andhra North,1375,2023-01-01
+S00074,FreshMart Tamil Park,Standard,Convenience,South,Tamil Nadu,Tamil Park,1136,2023-01-01
+S00075,Metro Haryana Park,Flagship,Wholesale,North,Haryana,Haryana Park,26773,2023-01-01
+S00076,QuickShop Telangana East,Standard,Supermarket,South,Telangana,Telangana East,19485,2023-01-01
+S00077,ValueBazaar Tamil Central,Flagship,Hypermarket,South,Tamil Nadu,Tamil Central,50584,2023-01-01
+S00078,Metro Kerala Market,Standard,Convenience,South,Kerala,Kerala Market,2392,2023-01-01
+S00079,QuickShop Karnataka Market,Standard,Convenience,South,Karnataka,Karnataka Market,2240,2023-01-01
+S00080,Metro Goa South,Standard,E-commerce,West,Goa,Goa South,0,2023-01-01
+S00081,FreshMart Maharashtra Market,Flagship,Hypermarket,West,Maharashtra,Maharashtra Market,56244,2023-01-01
+S00082,QuickShop Andhra Junction,Flagship,Hypermarket,South,Andhra Pradesh,Andhra Junction,32163,2023-01-01
+S00083,UrbanKart Chhattisgarh Park,Standard,Convenience,Central,Chhattisgarh,Chhattisgarh Park,2275,2023-01-01
+S00084,Metro Kerala Central,Standard,Convenience,South,Kerala,Kerala Central,1599,2023-01-01
+S00085,GreenGrocer Goa Plaza,Standard,Supermarket,West,Goa,Goa Plaza,11003,2023-01-01
+S00086,ValueBazaar Madhya East,Flagship,Hypermarket,Central,Madhya Pradesh,Madhya East,48872,2023-01-01
+S00087,UrbanKart Kerala Junction,Standard,Convenience,South,Kerala,Kerala Junction,1616,2023-11-11
+S00088,QuickShop Goa North,Standard,Supermarket,West,Goa,Goa North,18653,2023-01-01
+S00089,FreshMart Jharkhand Market,Flagship,Wholesale,East,Jharkhand,Jharkhand Market,32757,2023-02-22
+S00090,Metro Odisha North,Standard,Convenience,East,Odisha,Odisha North,601,2023-01-01
+S00091,QuickShop Gujarat Junction,Standard,Convenience,West,Gujarat,Gujarat Junction,527,2023-04-30
+S00092,UrbanKart West North,Flagship,Hypermarket,East,West Bengal,West North,48215,2023-01-01
+S00093,QuickShop West West,Standard,Convenience,East,West Bengal,West West,610,2023-01-01
+S00094,GreenGrocer Kerala Park,Standard,Convenience,South,Kerala,Kerala Park,2193,2023-01-01
+S00095,Metro Haryana West,Standard,Convenience,North,Haryana,Haryana West,482,2023-01-01
+S00096,GreenGrocer Tamil Central,Standard,Convenience,South,Tamil Nadu,Tamil Central,1553,2023-01-01
+S00097,FreshMart Uttar Market,Standard,Convenience,North,Uttar Pradesh,Uttar Market,2009,2023-01-01
+S00098,GreenGrocer Haryana West,Standard,Convenience,North,Haryana,Haryana West,1362,2023-01-01
+S00099,UrbanKart Bihar West,Flagship,Hypermarket,East,Bihar,Bihar West,54295,2023-01-01
+S00100,UrbanKart Goa East,Flagship,Wholesale,West,Goa,Goa East,33835,2023-01-01
+S00101,FreshMart Rajasthan Market,Standard,Supermarket,North,Rajasthan,Rajasthan Market,12803,2023-01-01
+S00102,FreshMart Chhattisgarh West,Standard,E-commerce,Central,Chhattisgarh,Chhattisgarh West,1,2023-01-01
+S00103,ValueBazaar Madhya South,Standard,Convenience,Central,Madhya Pradesh,Madhya South,1445,2023-01-01
+S00104,ValueBazaar Jharkhand Park,Standard,Convenience,East,Jharkhand,Jharkhand Park,1350,2023-01-01
+S00105,UrbanKart Goa South,Standard,Wholesale,West,Goa,Goa South,19387,2023-01-01
+S00106,UrbanKart Uttar Junction,Standard,Convenience,North,Uttar Pradesh,Uttar Junction,1814,2024-04-09
+S00107,GreenGrocer Bihar North,Standard,Convenience,East,Bihar,Bihar North,599,2023-01-01
+S00108,QuickShop Jharkhand South,Flagship,Hypermarket,East,Jharkhand,Jharkhand South,25123,2023-01-01
+S00109,ValueBazaar Gujarat South,Standard,Supermarket,West,Gujarat,Gujarat South,19517,2023-01-01
+S00110,UrbanKart Punjab Park,Standard,Wholesale,North,Punjab,Punjab Park,16311,2023-01-01
+S00111,Metro Madhya West,Standard,Supermarket,Central,Madhya Pradesh,Madhya West,8194,2023-01-01
+S00112,Metro Odisha Plaza,Standard,Convenience,East,Odisha,Odisha Plaza,1962,2023-01-01
+S00113,FreshMart Chhattisgarh North,Flagship,Wholesale,Central,Chhattisgarh,Chhattisgarh North,28259,2023-01-01
+S00114,GreenGrocer Maharashtra Central,Standard,Convenience,West,Maharashtra,Maharashtra Central,791,2023-01-01
+S00115,ValueBazaar Telangana Junction,Flagship,Hypermarket,South,Telangana,Telangana Junction,54741,2023-01-01
+S00116,ValueBazaar Kerala Plaza,Standard,Convenience,South,Kerala,Kerala Plaza,1129,2023-01-01
+S00117,QuickShop Bihar Market,Standard,E-commerce,East,Bihar,Bihar Market,0,2023-01-01
+S00118,FreshMart Andhra Central,Standard,Supermarket,South,Andhra Pradesh,Andhra Central,10865,2023-01-01
+S00119,ValueBazaar Assam Plaza,Flagship,Hypermarket,East,Assam,Assam Plaza,27966,2023-01-01
+S00120,GreenGrocer Madhya North,Standard,Supermarket,Central,Madhya Pradesh,Madhya North,11115,2023-01-01
+S00121,FreshMart Jharkhand Central,Standard,Supermarket,East,Jharkhand,Jharkhand Central,15298,2023-01-01
+S00122,Metro Assam Market,Standard,Convenience,East,Assam,Assam Market,1708,2023-01-01
+S00123,FreshMart Telangana West,Standard,Convenience,South,Telangana,Telangana West,1344,2024-05-02
+S00124,FreshMart Bihar Park,Flagship,Wholesale,East,Bihar,Bihar Park,26550,2023-01-01
+S00125,GreenGrocer Goa Plaza,Standard,Convenience,West,Goa,Goa Plaza,1712,2024-02-18
+S00126,ValueBazaar Telangana Park,Flagship,Hypermarket,South,Telangana,Telangana Park,32456,2023-01-01
+S00127,ValueBazaar Andhra South,Standard,Supermarket,South,Andhra Pradesh,Andhra South,9012,2023-01-01
+S00128,GreenGrocer Karnataka Central,Standard,Supermarket,South,Karnataka,Karnataka Central,11447,2023-01-01
+S00129,ValueBazaar Rajasthan West,Standard,Supermarket,North,Rajasthan,Rajasthan West,7339,2023-01-01
+S00130,Metro Maharashtra Market,Flagship,Wholesale,West,Maharashtra,Maharashtra Market,41086,2023-01-01
+S00131,FreshMart Madhya Park,Flagship,Hypermarket,Central,Madhya Pradesh,Madhya Park,47735,2023-01-01
+S00132,QuickShop Telangana South,Standard,Convenience,South,Telangana,Telangana South,2293,2023-01-01
+S00133,QuickShop Chhattisgarh East,Standard,Supermarket,Central,Chhattisgarh,Chhattisgarh East,19303,2023-01-01
+S00134,GreenGrocer West Central,Standard,Convenience,East,West Bengal,West Central,781,2023-01-01
+S00135,QuickShop Maharashtra North,Standard,E-commerce,West,Maharashtra,Maharashtra North,1,2023-01-01
+S00136,GreenGrocer Telangana Junction,Flagship,Wholesale,South,Telangana,Telangana Junction,27375,2023-01-01
+S00137,FreshMart Jharkhand Market,Standard,Supermarket,East,Jharkhand,Jharkhand Market,12931,2023-01-01
+S00138,ValueBazaar Chhattisgarh West,Standard,Supermarket,Central,Chhattisgarh,Chhattisgarh West,8691,2023-01-01
+S00139,QuickShop Goa Plaza,Flagship,Wholesale,West,Goa,Goa Plaza,25689,2023-01-01
+S00140,QuickShop Odisha Plaza,Standard,Supermarket,East,Odisha,Odisha Plaza,14531,2023-01-01
+S00141,UrbanKart Telangana Plaza,Standard,Supermarket,South,Telangana,Telangana Plaza,18049,2023-01-01
+S00142,Metro Goa North,Standard,Convenience,West,Goa,Goa North,1292,2023-01-01
+S00143,Metro Madhya East,Standard,Convenience,Central,Madhya Pradesh,Madhya East,1639,2023-01-01
+S00144,UrbanKart Tamil South,Flagship,Wholesale,South,Tamil Nadu,Tamil South,34965,2023-01-01
+S00145,UrbanKart Karnataka North,Flagship,Hypermarket,South,Karnataka,Karnataka North,26233,2023-01-01
+S00146,UrbanKart Andhra North,Standard,Supermarket,South,Andhra Pradesh,Andhra North,14298,2023-01-01
+S00147,Metro Maharashtra Junction,Standard,Supermarket,West,Maharashtra,Maharashtra Junction,11621,2023-01-01
+S00148,QuickShop Jharkhand Central,Standard,Wholesale,East,Jharkhand,Jharkhand Central,18029,2023-01-01
+S00149,FreshMart Uttar Park,Standard,Supermarket,North,Uttar Pradesh,Uttar Park,7374,2023-01-01
+S00150,QuickShop Delhi Central,Standard,Convenience,North,Delhi,Delhi Central,967,2023-01-01
+S00151,GreenGrocer Punjab West,Flagship,Wholesale,North,Punjab,Punjab West,35658,2023-01-01
+S00152,QuickShop Bihar Junction,Standard,Supermarket,East,Bihar,Bihar Junction,18593,2023-01-01
+S00153,FreshMart Bihar Park,Standard,Convenience,East,Bihar,Bihar Park,2155,2023-01-01
+S00154,UrbanKart Madhya Plaza,Standard,Convenience,Central,Madhya Pradesh,Madhya Plaza,1801,2023-01-01
+S00155,GreenGrocer Karnataka Market,Flagship,Hypermarket,South,Karnataka,Karnataka Market,34780,2023-01-01
+S00156,FreshMart Uttar Plaza,Standard,Supermarket,North,Uttar Pradesh,Uttar Plaza,17754,2023-01-01
+S00157,GreenGrocer Assam North,Flagship,Hypermarket,East,Assam,Assam North,47999,2023-01-01
+S00158,FreshMart Andhra Central,Flagship,Hypermarket,South,Andhra Pradesh,Andhra Central,53277,2023-01-01
+S00159,FreshMart Tamil Park,Standard,Convenience,South,Tamil Nadu,Tamil Park,2211,2023-01-01
+S00160,FreshMart Punjab West,Standard,Supermarket,North,Punjab,Punjab West,8850,2023-01-01
+S00161,UrbanKart Madhya Central,Standard,Convenience,Central,Madhya Pradesh,Madhya Central,2312,2023-01-01
+S00162,FreshMart Delhi West,Flagship,Hypermarket,North,Delhi,Delhi West,42369,2023-01-01
+S00163,ValueBazaar Maharashtra South,Standard,E-commerce,West,Maharashtra,Maharashtra South,0,2023-01-01
+S00164,Metro Telangana Junction,Standard,Supermarket,South,Telangana,Telangana Junction,7561,2023-01-01
+S00165,Metro Madhya Market,Standard,Convenience,Central,Madhya Pradesh,Madhya Market,585,2023-01-01
+S00166,FreshMart Karnataka Junction,Standard,Convenience,South,Karnataka,Karnataka Junction,1319,2023-01-01
+S00167,ValueBazaar West West,Standard,E-commerce,East,West Bengal,West West,1,2023-01-01
+S00168,GreenGrocer West Plaza,Standard,Convenience,East,West Bengal,West Plaza,449,2023-01-01
+S00169,Metro Kerala Central,Standard,Supermarket,South,Kerala,Kerala Central,13714,2023-01-01
+S00170,ValueBazaar Kerala Park,Standard,Convenience,South,Kerala,Kerala Park,1767,2023-01-01
+S00171,QuickShop Telangana Park,Standard,Convenience,South,Telangana,Telangana Park,2316,2023-01-01
+S00172,GreenGrocer Maharashtra Plaza,Flagship,Wholesale,West,Maharashtra,Maharashtra Plaza,24814,2023-01-01
+S00173,FreshMart Bihar Central,Flagship,Hypermarket,East,Bihar,Bihar Central,55719,2023-01-01
+S00174,Metro Telangana Plaza,Standard,E-commerce,South,Telangana,Telangana Plaza,1,2023-01-01
+S00175,GreenGrocer Maharashtra South,Standard,Wholesale,West,Maharashtra,Maharashtra South,16057,2023-01-01
+S00176,QuickShop Odisha Market,Standard,E-commerce,East,Odisha,Odisha Market,1,2023-01-01
+S00177,UrbanKart Rajasthan West,Standard,Supermarket,North,Rajasthan,Rajasthan West,7343,2023-01-01
+S00178,QuickShop Odisha Park,Standard,Convenience,East,Odisha,Odisha Park,1466,2023-01-01
+S00179,ValueBazaar Madhya North,Standard,Convenience,Central,Madhya Pradesh,Madhya North,1812,2023-01-01
+S00180,ValueBazaar Uttar North,Standard,Convenience,North,Uttar Pradesh,Uttar North,2477,2023-01-01
+S00181,Metro Maharashtra Plaza,Flagship,Hypermarket,West,Maharashtra,Maharashtra Plaza,39352,2023-01-01
+S00182,FreshMart Punjab Park,Standard,Convenience,North,Punjab,Punjab Park,1447,2023-12-31
+S00183,GreenGrocer Tamil Junction,Standard,Supermarket,South,Tamil Nadu,Tamil Junction,18664,2023-01-01
+S00184,GreenGrocer Haryana Market,Standard,Supermarket,North,Haryana,Haryana Market,13932,2023-01-01
+S00185,GreenGrocer Telangana Market,Standard,Supermarket,South,Telangana,Telangana Market,17050,2023-01-01
+S00186,ValueBazaar Maharashtra East,Standard,Supermarket,West,Maharashtra,Maharashtra East,14093,2023-01-01
+S00187,UrbanKart Telangana Park,Flagship,Wholesale,South,Telangana,Telangana Park,42289,2023-01-01
+S00188,ValueBazaar Andhra Central,Standard,E-commerce,South,Andhra Pradesh,Andhra Central,1,2023-01-01
+S00189,GreenGrocer Tamil South,Flagship,Wholesale,South,Tamil Nadu,Tamil South,30653,2023-01-01
+S00190,UrbanKart Telangana Plaza,Standard,Convenience,South,Telangana,Telangana Plaza,514,2023-01-01
+S00191,UrbanKart Tamil South,Standard,Convenience,South,Tamil Nadu,Tamil South,1115,2023-01-01
+S00192,ValueBazaar Tamil North,Standard,Supermarket,South,Tamil Nadu,Tamil North,13950,2023-01-01
+S00193,FreshMart Haryana North,Standard,E-commerce,North,Haryana,Haryana North,1,2023-01-01
+S00194,QuickShop Gujarat North,Standard,E-commerce,West,Gujarat,Gujarat North,0,2023-01-01
+S00195,FreshMart Kerala North,Standard,Supermarket,South,Kerala,Kerala North,10494,2023-01-01
+S00196,UrbanKart Delhi North,Standard,Convenience,North,Delhi,Delhi North,2336,2023-01-01
+S00197,QuickShop Gujarat East,Standard,Convenience,West,Gujarat,Gujarat East,510,2023-01-01
+S00198,FreshMart West Central,Standard,Convenience,East,West Bengal,West Central,2017,2023-01-01
+S00199,Metro West East,Standard,Convenience,East,West Bengal,West East,1025,2023-01-01
+S00200,FreshMart Haryana Market,Flagship,Wholesale,North,Haryana,Haryana Market,23187,2023-01-01

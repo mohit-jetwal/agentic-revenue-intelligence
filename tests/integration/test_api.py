@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api.app import create_app
 from app.api.middleware import TRACE_HEADER
+from app.config.settings import DataSettings
+from tests.conftest import build_settings
 
 pytestmark = pytest.mark.integration
 
@@ -35,14 +40,40 @@ def test_health_lists_every_dependency(client: TestClient) -> None:
     } <= names
 
 
-def test_health_is_degraded_before_data_is_generated(client: TestClient) -> None:
-    """Honest reporting: no data and no API key is degraded, not healthy."""
-    body = client.get("/health").json()
-    assert body["status"] == "degraded"
+def test_health_is_degraded_before_data_is_generated(tmp_path: Path) -> None:
+    """Honest reporting: no data and no API key is degraded, not healthy.
 
+    Builds its own app pointed at an empty temporary root. Using the configured
+    root would make the result depend on whether the developer happens to have
+    generated a dataset, so the test would pass or fail for reasons unrelated to
+    the code.
+    """
+    settings = build_settings(
+        data=DataSettings(_env_file=None, parquet_root=tmp_path / "gold")
+    )
+    with TestClient(create_app(settings)) as client:
+        body = client.get("/health").json()
+
+    assert body["status"] == "degraded"
     by_name = {d["name"]: d for d in body["dependencies"]}
     assert by_name["data_repository"]["status"] == "not_configured"
     assert "Step 2" in by_name["data_repository"]["detail"]
+
+
+def test_health_is_ok_once_data_exists(smoke_result: object, tmp_path: Path) -> None:
+    """The counterpart: with a dataset present, the repository reports OK."""
+    settings = build_settings(
+        data=DataSettings(
+            _env_file=None,
+            parquet_root=smoke_result.root / "gold",  # type: ignore[attr-defined]
+        )
+    )
+    with TestClient(create_app(settings)) as client:
+        body = client.get("/health").json()
+
+    by_name = {d["name"]: d for d in body["dependencies"]}
+    assert by_name["data_repository"]["status"] == "ok"
+    assert "v1.0-smoke" in by_name["data_repository"]["detail"]
 
 
 def test_health_stays_200_when_a_dependency_is_missing(client: TestClient) -> None:

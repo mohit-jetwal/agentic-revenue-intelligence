@@ -9,9 +9,16 @@ answering from stale local Parquet while believing it queried the warehouse.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from app.config.settings import AppSettings, DatabricksSettings, Environment
+from app.config.settings import (
+    AppSettings,
+    DatabricksSettings,
+    DataSettings,
+    Environment,
+)
 from app.llm.claude import ClaudeProvider
 from app.memory.vector_store import ChromaVectorStore
 from app.services.container import (
@@ -21,6 +28,7 @@ from app.services.container import (
     set_container,
 )
 from app.services.model_registry import MLflowModelRegistry
+from data.repositories.base import DatasetNotFoundError
 from data.repositories.databricks import DatabricksDataRepository
 from data.repositories.local import LocalDataRepository
 from tests.conftest import build_settings
@@ -103,9 +111,23 @@ def test_databricks_repository_methods_name_the_stage() -> None:
         repo.get_sales()
 
 
-def test_local_repository_unimplemented_methods_name_the_step(container: Container) -> None:
-    with pytest.raises(NotImplementedError, match="Step 3"):
-        container.data_repository.get_sales()
+def test_local_repository_reports_missing_dataset_clearly(tmp_path: Path) -> None:
+    """With no generated data, reads must say what to run rather than crash.
+
+    Pointed at a temporary root rather than the configured one: whether a
+    developer happens to have generated a dataset must not decide the outcome.
+    """
+    settings = build_settings(
+        data=DataSettings(_env_file=None, parquet_root=tmp_path / "gold")
+    )
+    repository = Container(settings).data_repository
+
+    with pytest.raises(DatasetNotFoundError, match="generate-data"):
+        repository.get_sales()
+
+    healthy, detail = repository.health_check()
+    assert healthy is False
+    assert "Step 2" in detail
 
 
 def test_budget_trackers_are_not_shared(container: Container) -> None:

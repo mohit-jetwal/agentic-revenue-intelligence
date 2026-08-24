@@ -1,0 +1,41 @@
+# =============================================================================
+# Stress / production-simulation profile.
+#
+# ~40,000 product-store pairs x 1,096 days = ~44M daily rows (~4 GB Parquet).
+# Will NOT fit in memory as a single frame - generation streams one partition
+# per chunk, and validation runs per-partition rather than loading whole.
+#
+# Run on demand, not routinely:
+#   uv run ari generate-data --profile stress --seed 42
+# =============================================================================
+
+extends: dev
+
+dataset_version: "v1.0-stress"
+
+scale:
+  products: 500
+  stores: 1000
+  customers: 60000
+  competitors: 4
+  stores_per_product_mean: 80
+  stores_per_product_std: 24
+  transaction_sample_rate: 0.010
+
+relationships:
+  strong_substitute_pairs_per_category: 6
+  weak_substitute_pairs_per_category: 14
+  complement_pairs_per_category: 4
+  cross_category_complement_pairs: 30
+
+scenarios:
+  price_increase:      { products: 6, magnitude: 0.08, duration_days: 120 }
+  successful_promo:    { products: 6, discount: 0.15, duration_days: 21 }
+  bad_promo:           { products: 6, discount: 0.38, duration_days: 21 }
+  stockout:            { products: 8, stores_fraction: 0.55, duration_days: 45 }
+  competitor_price_cut: { products: 8, magnitude: -0.12, duration_days: 75 }
+
+output:
+  # Smaller chunks: each partition must stay comfortably within RAM.
+  chunk_months: 1
+  write_samples: true

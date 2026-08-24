@@ -1,0 +1,44 @@
+# =============================================================================
+# Smoke profile - used by CI and the test suite.
+#
+# Deliberately small enough to generate inside a test run, but NOT so small that
+# relationships stop being recoverable: ~8 stores per product x 1,096 days is
+# ~8,800 observations per product, which is still enough for the statistical
+# recovery tests to fit a panel regression and land near the true elasticity.
+# Shrinking further would make the tests pass or fail on noise.
+#
+#   uv run ari generate-data --profile smoke --seed 42
+# =============================================================================
+
+extends: dev
+
+dataset_version: "v1.0-smoke"
+
+scale:
+  products: 40
+  stores: 30
+  customers: 2000
+  competitors: 2
+  stores_per_product_mean: 8
+  stores_per_product_std: 2
+  transaction_sample_rate: 0.012
+
+time:
+  generate_holdout: false
+
+relationships:
+  strong_substitute_pairs_per_category: 1
+  weak_substitute_pairs_per_category: 2
+  complement_pairs_per_category: 1
+  cross_category_complement_pairs: 3
+
+scenarios:
+  price_increase:      { products: 1, magnitude: 0.08, duration_days: 120 }
+  successful_promo:    { products: 1, discount: 0.15, duration_days: 21 }
+  bad_promo:           { products: 1, discount: 0.38, duration_days: 21 }
+  stockout:            { products: 1, stores_fraction: 0.55, duration_days: 45 }
+  competitor_price_cut: { products: 1, magnitude: -0.12, duration_days: 75 }
+
+output:
+  chunk_months: 6
+  write_samples: false

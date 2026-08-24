@@ -1,0 +1,301 @@
+product_id,product_name,brand,category,subcategory,pack_size,unit_cost,base_price,launch_date,discontinue_date,product_status
+P00001,Ember Fresh Carbonated 6-pack,Ember Fresh,Beverages,Carbonated,6-pack,70.66,101.75,2023-01-01,,Active
+P00002,Cascade Gold Energy 6-pack,Cascade Gold,Beverages,Energy,6-pack,47.13,66.73,2024-12-16,,Launched
+P00003,Crest Naturals Water 250ml,Crest Naturals,Beverages,Water,250ml,24.57,37.95,2023-01-01,,Active
+P00004,Cascade Gold Water 500ml,Cascade Gold,Beverages,Water,500ml,22.53,36.04,2023-01-01,,Active
+P00005,Crest Naturals Water 100g,Crest Naturals,Beverages,Water,100g,59.77,101.25,2023-04-24,,Launched
+P00006,Ember Fresh Juice 500ml,Ember Fresh,Beverages,Juice,500ml,16.54,24.18,2023-01-01,,Active
+P00007,Cascade Select Energy 1L,Cascade Select,Beverages,Energy,1L,73.55,110.44,2025-01-20,,Launched
+P00008,Cascade Gold Water 250ml,Cascade Gold,Beverages,Water,250ml,29.65,44.86,2023-01-01,,Active
+P00009,Ember Fresh Tea & Coffee 1kg,Ember Fresh,Beverages,Tea & Coffee,1kg,80.84,134.39,2023-01-01,,Active
+P00010,Ember Fresh Energy 1kg,Ember Fresh,Beverages,Energy,1kg,67.31,107.52,2023-07-26,,Launched
+P00011,Cascade Gold Carbonated 500g,Cascade Gold,Beverages,Carbonated,500g,17.27,26.41,2023-01-01,,Active
+P00012,Cascade Select Water 500ml,Cascade Select,Beverages,Water,500ml,71.93,117.69,2023-01-01,,Active
+P00013,Crest Naturals Water 1L,Crest Naturals,Beverages,Water,1L,55.83,81.29,2023-01-01,,Active
+P00014,Cascade Select Water 200g,Cascade Select,Beverages,Water,200g,48.96,72.01,2023-01-01,,Active
+P00015,Ember Fresh Energy 100g,Ember Fresh,Beverages,Energy,100g,56.33,98.15,2023-01-01,,Active
+P00016,Crest Naturals Carbonated 1kg,Crest Naturals,Beverages,Carbonated,1kg,76.78,133.34,2023-08-09,,Launched
+P00017,Ember Fresh Water 2L,Ember Fresh,Beverages,Water,2L,74.64,104.63,2023-01-01,,Active
+P00018,Cascade Pro Tea & Coffee 200g,Cascade Pro,Beverages,Tea & Coffee,200g,68.38,109.13,2023-01-01,,Active
+P00019,Cascade Gold Water 1kg,Cascade Gold,Beverages,Water,1kg,67.53,119.74,2023-01-01,,Active
+P00020,Cascade Pro Energy 500ml,Cascade Pro,Beverages,Energy,500ml,75.92,124.36,2023-01-01,,Active
+P00021,Ember Fresh Water 500ml,Ember Fresh,Beverages,Water,500ml,60.82,100.49,2023-01-01,,Active
+P00022,Crest Naturals Energy 500ml,Crest Naturals,Beverages,Energy,500ml,31.3,53.29,2023-01-01,,Active
+P00023,Cascade Pro Carbonated 6-pack,Cascade Pro,Beverages,Carbonated,6-pack,50.36,88.85,2023-01-01,,Active
+P00024,Ember Fresh Tea & Coffee 2L,Ember Fresh,Beverages,Tea & Coffee,2L,62.49,111.19,2023-01-01,,Active
+P00025,Cascade Select Energy 1kg,Cascade Select,Beverages,Energy,1kg,69.01,105.36,2023-01-01,,Active
+P00026,Cascade Select Carbonated 100g,Cascade Select,Beverages,Carbonated,100g,12.44,19.1,2023-01-01,,Active
+P00027,Cascade Pro Water 250ml,Cascade Pro,Beverages,Water,250ml,61.66,89.64,2023-01-01,,Active
+P00028,Crest Naturals Juice 500ml,Crest Naturals,Beverages,Juice,500ml,36.69,52.48,2023-01-01,,Active
+P00029,Ember Fresh Juice 500g,Ember Fresh,Beverages,Juice,500g,59.55,95.53,2023-01-01,,Active
+P00030,Ember Fresh Juice 200g,Ember Fresh,Beverages,Juice,200g,62.41,89.48,2023-01-01,,Active
+P00031,Crest Naturals Energy 1kg,Crest Naturals,Beverages,Energy,1kg,70.97,127.55,2023-01-01,,Active
+P00032,Ember Fresh Carbonated 200g,Ember Fresh,Beverages,Carbonated,200g,46.15,65.06,2023-01-01,,Active
+P00033,Ember Fresh Tea & Coffee 1L,Ember Fresh,Beverages,Tea & Coffee,1L,29.4,43.76,2023-01-01,,Active
+P00034,Cascade Select Tea & Coffee 2L,Cascade Select,Beverages,Tea & Coffee,2L,34.43,47.97,2023-01-01,,Active
+P00035,Crest Naturals Energy 250ml,Crest Naturals,Beverages,Energy,250ml,78.83,119.2,2023-01-01,,Active
+P00036,Crest Naturals Energy 250ml,Crest Naturals,Beverages,Energy,250ml,63.92,92.3,2023-01-01,,Active
+P00037,Cascade Select Carbonated 1kg,Cascade Select,Beverages,Carbonated,1kg,78.63,138.97,2023-01-01,,Active
+P00038,Crest Naturals Juice 6-pack,Crest Naturals,Beverages,Juice,6-pack,28.67,46.81,2023-01-01,,Active
+P00039,Crest Naturals Carbonated 100g,Crest Naturals,Beverages,Carbonated,100g,47.81,67.48,2023-01-01,,Active
+P00040,Cascade Select Tea & Coffee 1kg,Cascade Select,Beverages,Tea & Coffee,1kg,55.08,78.31,2023-01-01,,Active
+P00041,Cascade Gold Tea & Coffee 1kg,Cascade Gold,Beverages,Tea & Coffee,1kg,86.36,126.07,2023-01-01,,Active
+P00042,Cascade Select Water 250ml,Cascade Select,Beverages,Water,250ml,26.23,42.8,2023-01-01,,Active
+P00043,Cascade Gold Juice 6-pack,Cascade Gold,Beverages,Juice,6-pack,23.14,33.71,2023-01-01,,Active
+P00044,Crest Naturals Energy 2L,Crest Naturals,Beverages,Energy,2L,70.58,128.07,2023-01-01,,Active
+P00045,Cascade Gold Water 1kg,Cascade Gold,Beverages,Water,1kg,83.68,130.56,2023-01-01,,Active
+P00046,Crest Naturals Carbonated 1L,Crest Naturals,Beverages,Carbonated,1L,87.54,137.55,2024-04-11,,Launched
+P00047,Cascade Pro Water 6-pack,Cascade Pro,Beverages,Water,6-pack,74.42,114.85,2023-01-01,,Active
+P00048,Cascade Pro Carbonated 6-pack,Cascade Pro,Beverages,Carbonated,6-pack,62.05,106.74,2023-01-01,,Active
+P00049,Ember Fresh Tea & Coffee 250ml,Ember Fresh,Beverages,Tea & Coffee,250ml,37.8,54.12,2023-01-01,,Active
+P00050,Cascade Select Energy 100g,Cascade Select,Beverages,Energy,100g,26.36,42.26,2023-01-01,,Active
+P00051,Crest Naturals Tea & Coffee 6-pack,Crest Naturals,Beverages,Tea & Coffee,6-pack,32.51,46.36,2023-01-01,,Active
+P00052,Cascade Gold Tea & Coffee 200g,Cascade Gold,Beverages,Tea & Coffee,200g,38.9,55.1,2023-01-01,,Active
+P00053,Cascade Pro Energy 500g,Cascade Pro,Beverages,Energy,500g,36.49,56.93,2023-01-01,,Active
+P00054,Cascade Gold Energy 500ml,Cascade Gold,Beverages,Energy,500ml,38.96,69.0,2023-01-01,,Active
+P00055,Orchid Classic Namkeen 200g,Orchid Classic,Snacks,Namkeen,200g,62.48,95.45,2023-01-01,2025-05-21,Discontinued
+P00056,Orchid Classic Namkeen 1kg,Orchid Classic,Snacks,Namkeen,1kg,15.59,25.57,2023-01-01,,Active
+P00057,Everest Biscuits 100g,Everest,Snacks,Biscuits,100g,18.39,30.62,2023-01-01,,Active
+P00058,Ember Select Biscuits 1kg,Ember Select,Snacks,Biscuits,1kg,47.22,71.42,2023-01-01,,Active
+P00059,Everest Chocolate 6-pack,Everest,Snacks,Chocolate,6-pack,54.95,91.04,2023-01-01,,Active
+P00060,Ember Select Nuts 1L,Ember Select,Snacks,Nuts,1L,20.78,35.61,2023-01-01,,Active
+P00061,Orchid Classic Nuts 1kg,Orchid Classic,Snacks,Nuts,1kg,63.4,96.91,2023-01-01,,Active
+P00062,Everest Namkeen 500g,Everest,Snacks,Namkeen,500g,32.55,52.07,2023-01-01,,Active
+P00063,Zenith Fresh Chocolate 2L,Zenith Fresh,Snacks,Chocolate,2L,40.41,68.69,2023-01-01,,Active
+P00064,Orchid Classic Biscuits 2L,Orchid Classic,Snacks,Biscuits,2L,68.81,128.24,2023-01-01,,Active
+P00065,Everest Chips 500ml,Everest,Snacks,Chips,500ml,60.91,108.9,2023-01-01,,Active
+P00066,Orchid Classic Chocolate 100g,Orchid Classic,Snacks,Chocolate,100g,59.64,88.25,2023-01-01,,Active
+P00067,Ember Select Namkeen 250ml,Ember Select,Snacks,Namkeen,250ml,60.06,95.66,2023-01-01,,Active
+P00068,Zenith Fresh Chips 500ml,Zenith Fresh,Snacks,Chips,500ml,20.01,37.6,2023-12-19,,Launched
+P00069,Ember Select Chocolate 200g,Ember Select,Snacks,Chocolate,200g,10.35,15.78,2023-01-01,,Active
+P00070,Orchid Classic Chocolate 250ml,Orchid Classic,Snacks,Chocolate,250ml,53.26,88.82,2023-01-01,2024-11-16,Discontinued
+P00071,Zenith Fresh Nuts 6-pack,Zenith Fresh,Snacks,Nuts,6-pack,29.51,45.69,2023-01-01,,Active
+P00072,Zenith Fresh Nuts 6-pack,Zenith Fresh,Snacks,Nuts,6-pack,8.58,12.28,2023-01-01,,Active
+P00073,Ember Select Biscuits 500ml,Ember Select,Snacks,Biscuits,500ml,57.92,107.04,2023-01-01,,Active
+P00074,Everest Biscuits 200g,Everest,Snacks,Biscuits,200g,34.91,54.91,2023-01-01,,Active
+P00075,Orchid Classic Chocolate 6-pack,Orchid Classic,Snacks,Chocolate,6-pack,39.07,71.25,2023-01-01,,Active
+P00076,Ember Select Namkeen 250ml,Ember Select,Snacks,Namkeen,250ml,24.82,37.76,2023-01-01,2025-07-06,Discontinued
+P00077,Zenith Fresh Nuts 6-pack,Zenith Fresh,Snacks,Nuts,6-pack,40.8,70.09,2023-01-01,,Active
+P00078,Everest Chips 6-pack,Everest,Snacks,Chips,6-pack,19.17,29.12,2023-01-01,,Active
+P00079,Zenith Fresh Chips 500g,Zenith Fresh,Snacks,Chips,500g,24.49,41.77,2023-01-01,,Active
+P00080,Zenith Fresh Biscuits 6-pack,Zenith Fresh,Snacks,Biscuits,6-pack,24.23,38.55,2023-01-01,,Active
+P00081,Orchid Classic Biscuits 2L,Orchid Classic,Snacks,Biscuits,2L,18.85,31.21,2023-01-01,,Active
+P00082,Zenith Fresh Chocolate 6-pack,Zenith Fresh,Snacks,Chocolate,6-pack,32.5,56.33,2023-01-01,,Active
+P00083,Ember Select Chips 500g,Ember Select,Snacks,Chips,500g,31.73,60.82,2023-01-01,,Active
+P00084,Everest Biscuits 1L,Everest,Snacks,Biscuits,1L,58.6,92.46,2023-01-01,,Active
+P00085,Zenith Fresh Nuts 6-pack,Zenith Fresh,Snacks,Nuts,6-pack,56.46,103.9,2023-01-01,,Active
+P00086,Orchid Classic Chips 100g,Orchid Classic,Snacks,Chips,100g,61.03,91.31,2023-01-01,,Active
+P00087,Everest Biscuits 500g,Everest,Snacks,Biscuits,500g,54.59,91.35,2023-01-01,,Active
+P00088,Zenith Fresh Namkeen 1L,Zenith Fresh,Snacks,Namkeen,1L,39.88,65.34,2023-01-01,,Active
+P00089,Orchid Classic Namkeen 500ml,Orchid Classic,Snacks,Namkeen,500ml,37.02,53.76,2023-01-01,,Active
+P00090,Zenith Fresh Chips 1kg,Zenith Fresh,Snacks,Chips,1kg,57.01,108.34,2024-09-14,,Launched
+P00091,Orchid Classic Chocolate 250ml,Orchid Classic,Snacks,Chocolate,250ml,36.24,53.0,2023-01-01,,Active
+P00092,Everest Nuts 1L,Everest,Snacks,Nuts,1L,57.21,105.02,2023-01-01,,Active
+P00093,Orchid Classic Nuts 500ml,Orchid Classic,Snacks,Nuts,500ml,55.31,81.23,2023-01-01,,Active
+P00094,Zenith Fresh Namkeen 2L,Zenith Fresh,Snacks,Namkeen,2L,60.97,92.7,2023-01-01,,Active
+P00095,Ember Select Biscuits 6-pack,Ember Select,Snacks,Biscuits,6-pack,36.87,61.02,2023-01-01,,Active
+P00096,Ember Select Namkeen 2L,Ember Select,Snacks,Namkeen,2L,25.08,41.67,2023-01-01,2025-09-08,Discontinued
+P00097,Ember Select Biscuits 250ml,Ember Select,Snacks,Biscuits,250ml,20.83,32.21,2023-01-01,,Active
+P00098,Everest Chocolate 500g,Everest,Snacks,Chocolate,500g,39.52,65.36,2023-01-01,,Active
+P00099,Orchid Classic Biscuits 2L,Orchid Classic,Snacks,Biscuits,2L,39.19,70.69,2023-01-01,,Active
+P00100,Orchid Classic Namkeen 100g,Orchid Classic,Snacks,Namkeen,100g,37.6,70.83,2023-01-01,,Active
+P00101,Zenith Fresh Nuts 1L,Zenith Fresh,Snacks,Nuts,1L,53.09,83.55,2023-01-01,,Active
+P00102,Zenith Fresh Chips 1L,Zenith Fresh,Snacks,Chips,1L,50.75,85.38,2023-01-01,,Active
+P00103,Harvest Fresh Skin Care 6-pack,Harvest Fresh,Personal Care,Skin Care,6-pack,188.55,302.76,2023-01-01,,Active
+P00104,Orchid Fresh Skin Care 500ml,Orchid Fresh,Personal Care,Skin Care,500ml,132.71,226.69,2023-01-01,,Active
+P00105,Orchid Fresh Deodorant 6-pack,Orchid Fresh,Personal Care,Deodorant,6-pack,73.68,133.16,2023-01-01,,Active
+P00106,Everest Gold Oral Care 100g,Everest Gold,Personal Care,Oral Care,100g,215.31,404.43,2023-01-01,,Active
+P00107,Lotus Fresh Skin Care 100g,Lotus Fresh,Personal Care,Skin Care,100g,116.28,244.29,2023-01-01,,Active
+P00108,Zenith Gold Soap 2L,Zenith Gold,Personal Care,Soap,2L,94.35,191.92,2023-01-01,,Active
+P00109,Zenith Gold Shampoo 6-pack,Zenith Gold,Personal Care,Shampoo,6-pack,153.32,246.85,2023-01-01,,Active
+P00110,Everest Gold Shampoo 250ml,Everest Gold,Personal Care,Shampoo,250ml,136.55,242.45,2023-01-01,,Active
+P00111,Everest Gold Oral Care 6-pack,Everest Gold,Personal Care,Oral Care,6-pack,132.43,277.52,2023-01-01,,Active
+P00112,Lotus Fresh Deodorant 500ml,Lotus Fresh,Personal Care,Deodorant,500ml,181.58,305.57,2023-01-01,,Active
+P00113,Orchid Fresh Soap 1kg,Orchid Fresh,Personal Care,Soap,1kg,129.09,213.73,2023-01-01,,Active
+P00114,Zenith Gold Oral Care 2L,Zenith Gold,Personal Care,Oral Care,2L,38.86,69.18,2023-01-01,,Active
+P00115,Harvest Fresh Shampoo 200g,Harvest Fresh,Personal Care,Shampoo,200g,182.4,319.61,2023-01-01,,Active
+P00116,Everest Gold Soap 500g,Everest Gold,Personal Care,Soap,500g,140.65,262.63,2023-01-01,,Active
+P00117,Lotus Fresh Skin Care 100g,Lotus Fresh,Personal Care,Skin Care,100g,80.6,139.9,2023-01-01,,Active
+P00118,Harvest Fresh Deodorant 500g,Harvest Fresh,Personal Care,Deodorant,500g,112.62,197.07,2023-01-01,,Active
+P00119,Everest Gold Skin Care 1L,Everest Gold,Personal Care,Skin Care,1L,191.35,353.29,2023-01-01,,Active
+P00120,Harvest Fresh Oral Care 2L,Harvest Fresh,Personal Care,Oral Care,2L,109.24,188.41,2023-01-01,,Active
+P00121,Orchid Fresh Oral Care 100g,Orchid Fresh,Personal Care,Oral Care,100g,114.63,216.67,2023-01-01,,Active
+P00122,Lotus Fresh Skin Care 500ml,Lotus Fresh,Personal Care,Skin Care,500ml,100.7,204.16,2023-01-01,,Active
+P00123,Harvest Fresh Deodorant 1L,Harvest Fresh,Personal Care,Deodorant,1L,158.4,348.78,2023-01-01,,Active
+P00124,Lotus Fresh Shampoo 2L,Lotus Fresh,Personal Care,Shampoo,2L,97.0,197.37,2023-01-01,,Active
+P00125,Orchid Fresh Deodorant 1L,Orchid Fresh,Personal Care,Deodorant,1L,121.98,234.7,2023-01-01,,Active
+P00126,Lotus Fresh Shampoo 1L,Lotus Fresh,Personal Care,Shampoo,1L,128.33,202.4,2023-01-01,,Active
+P00127,Orchid Fresh Soap 500g,Orchid Fresh,Personal Care,Soap,500g,113.09,179.2,2023-01-01,,Active
+P00128,Lotus Fresh Shampoo 200g,Lotus Fresh,Personal Care,Shampoo,200g,122.12,227.72,2023-01-01,,Active
+P00129,Zenith Gold Shampoo 6-pack,Zenith Gold,Personal Care,Shampoo,6-pack,212.05,368.6,2023-01-01,,Active
+P00130,Lotus Fresh Skin Care 500ml,Lotus Fresh,Personal Care,Skin Care,500ml,164.87,326.11,2023-01-01,,Active
+P00131,Lotus Fresh Soap 100g,Lotus Fresh,Personal Care,Soap,100g,45.25,84.58,2023-01-01,,Active
+P00132,Everest Gold Shampoo 100g,Everest Gold,Personal Care,Shampoo,100g,45.97,83.52,2023-01-01,,Active
+P00133,Everest Gold Oral Care 500g,Everest Gold,Personal Care,Oral Care,500g,38.01,76.72,2023-01-01,,Active
+P00134,Everest Gold Oral Care 6-pack,Everest Gold,Personal Care,Oral Care,6-pack,75.56,121.9,2023-01-01,,Active
+P00135,Harvest Fresh Skin Care 250ml,Harvest Fresh,Personal Care,Skin Care,250ml,136.83,220.52,2023-01-01,,Active
+P00136,Everest Gold Skin Care 1kg,Everest Gold,Personal Care,Skin Care,1kg,51.05,104.22,2023-01-01,,Active
+P00137,Orchid Fresh Soap 500g,Orchid Fresh,Personal Care,Soap,500g,69.1,114.77,2023-01-01,2025-10-07,Discontinued
+P00138,Everest Gold Skin Care 500ml,Everest Gold,Personal Care,Skin Care,500ml,211.42,372.93,2023-01-01,,Active
+P00139,Lotus Fresh Skin Care 250ml,Lotus Fresh,Personal Care,Skin Care,250ml,43.21,83.0,2023-01-01,,Active
+P00140,Orchid Fresh Skin Care 100g,Orchid Fresh,Personal Care,Skin Care,100g,173.28,273.2,2023-01-01,,Active
+P00141,Harvest Fresh Skin Care 6-pack,Harvest Fresh,Personal Care,Skin Care,6-pack,219.47,353.93,2023-01-01,,Active
+P00142,Lotus Fresh Soap 2L,Lotus Fresh,Personal Care,Soap,2L,211.96,421.66,2023-01-01,,Active
+P00143,Orchid Fresh Oral Care 500ml,Orchid Fresh,Personal Care,Oral Care,500ml,32.59,54.78,2023-01-01,,Active
+P00144,Orchid Fresh Skin Care 500g,Orchid Fresh,Personal Care,Skin Care,500g,53.56,107.79,2023-01-01,,Active
+P00145,Zenith Gold Oral Care 6-pack,Zenith Gold,Personal Care,Oral Care,6-pack,146.57,308.29,2023-01-01,,Active
+P00146,Orchid Fresh Skin Care 100g,Orchid Fresh,Personal Care,Skin Care,100g,114.98,246.16,2023-01-01,,Active
+P00147,Zenith Gold Oral Care 1kg,Zenith Gold,Personal Care,Oral Care,1kg,30.33,55.35,2023-01-01,,Active
+P00148,Everest Naturals Floor Cleaner 2L,Everest Naturals,Home Care,Floor Cleaner,2L,172.9,262.08,2023-01-01,,Active
+P00149,Crest Classic Dishwash 2L,Crest Classic,Home Care,Dishwash,2L,32.29,61.88,2023-01-01,,Active
+P00150,Aura Classic Dishwash 6-pack,Aura Classic,Home Care,Dishwash,6-pack,117.65,177.73,2023-01-01,,Active
+P00151,Everest Naturals Detergent 1L,Everest Naturals,Home Care,Detergent,1L,62.68,98.1,2023-01-01,,Active
+P00152,Everest Naturals Detergent 250ml,Everest Naturals,Home Care,Detergent,250ml,127.74,200.6,2023-01-01,,Active
+P00153,Ember Classic Dishwash 500g,Ember Classic,Home Care,Dishwash,500g,59.45,89.13,2023-01-01,,Active
+P00154,Crest Classic Floor Cleaner 1L,Crest Classic,Home Care,Floor Cleaner,1L,45.28,67.65,2023-01-01,,Active
+P00155,Verve Select Dishwash 6-pack,Verve Select,Home Care,Dishwash,6-pack,65.47,109.24,2023-01-01,,Active
+P00156,Sunrise Floor Cleaner 6-pack,Sunrise,Home Care,Floor Cleaner,6-pack,169.58,272.42,2023-01-01,,Active
+P00157,Ember Classic Detergent 6-pack,Ember Classic,Home Care,Detergent,6-pack,151.29,254.14,2023-01-01,,Active
+P00158,Verve Select Detergent 500g,Verve Select,Home Care,Detergent,500g,148.31,249.22,2023-01-01,,Active
+P00159,Sunrise Air Freshener 1kg,Sunrise,Home Care,Air Freshener,1kg,70.01,137.01,2023-01-01,,Active
+P00160,Aura Classic Floor Cleaner 2L,Aura Classic,Home Care,Floor Cleaner,2L,41.29,67.72,2023-01-01,,Active
+P00161,Aura Classic Air Freshener 500g,Aura Classic,Home Care,Air Freshener,500g,138.95,236.25,2023-07-21,,Launched
+P00162,Everest Naturals Floor Cleaner 500g,Everest Naturals,Home Care,Floor Cleaner,500g,36.81,61.66,2025-01-03,,Launched
+P00163,Sunrise Dishwash 250ml,Sunrise,Home Care,Dishwash,250ml,98.7,146.66,2023-01-01,,Active
+P00164,Ember Classic Detergent 1kg,Ember Classic,Home Care,Detergent,1kg,38.24,66.31,2023-01-01,2025-10-28,Discontinued
+P00165,Crest Classic Dishwash 250ml,Crest Classic,Home Care,Dishwash,250ml,93.79,179.6,2023-01-01,,Active
+P00166,Summit Naturals Floor Cleaner 1L,Summit Naturals,Home Care,Floor Cleaner,1L,50.48,91.61,2024-12-27,,Launched
+P00167,Verve Select Air Freshener 500g,Verve Select,Home Care,Air Freshener,500g,145.91,244.12,2024-07-03,,Launched
+P00168,Verve Select Floor Cleaner 200g,Verve Select,Home Care,Floor Cleaner,200g,106.87,212.37,2023-01-01,,Active
+P00169,Ember Classic Air Freshener 200g,Ember Classic,Home Care,Air Freshener,200g,132.22,261.08,2023-01-01,,Active
+P00170,Summit Naturals Detergent 500g,Summit Naturals,Home Care,Detergent,500g,39.65,68.73,2023-01-01,,Active
+P00171,Summit Naturals Detergent 250ml,Summit Naturals,Home Care,Detergent,250ml,131.91,210.85,2023-11-21,,Launched
+P00172,Summit Naturals Air Freshener 100g,Summit Naturals,Home Care,Air Freshener,100g,159.72,260.04,2023-01-01,,Active
+P00173,Aura Classic Floor Cleaner 100g,Aura Classic,Home Care,Floor Cleaner,100g,139.82,262.18,2023-01-01,,Active
+P00174,Verve Select Floor Cleaner 500ml,Verve Select,Home Care,Floor Cleaner,500ml,134.67,244.7,2023-01-01,2025-07-27,Discontinued
+P00175,Aura Classic Floor Cleaner 200g,Aura Classic,Home Care,Floor Cleaner,200g,112.73,177.92,2024-08-17,,Launched
+P00176,Crest Classic Floor Cleaner 100g,Crest Classic,Home Care,Floor Cleaner,100g,176.88,294.05,2023-01-01,,Active
+P00177,Aura Classic Detergent 1kg,Aura Classic,Home Care,Detergent,1kg,94.37,175.28,2023-05-11,,Launched
+P00178,Crest Classic Detergent 500ml,Crest Classic,Home Care,Detergent,500ml,167.09,248.64,2023-01-01,,Active
+P00179,Aura Classic Floor Cleaner 500ml,Aura Classic,Home Care,Floor Cleaner,500ml,79.23,122.83,2023-01-01,,Active
+P00180,Crest Classic Dishwash 200g,Crest Classic,Home Care,Dishwash,200g,58.28,102.66,2023-01-01,,Active
+P00181,Verve Select Detergent 500g,Verve Select,Home Care,Detergent,500g,161.59,312.13,2023-01-01,,Active
+P00182,Everest Naturals Floor Cleaner 1kg,Everest Naturals,Home Care,Floor Cleaner,1kg,118.41,202.23,2023-01-01,,Active
+P00183,Everest Naturals Detergent 250ml,Everest Naturals,Home Care,Detergent,250ml,37.64,66.58,2023-01-01,2024-11-05,Discontinued
+P00184,Ember Classic Dishwash 500g,Ember Classic,Home Care,Dishwash,500g,178.28,342.88,2023-01-01,,Active
+P00185,Everest Naturals Detergent 1kg,Everest Naturals,Home Care,Detergent,1kg,103.57,204.23,2023-01-01,,Active
+P00186,Everest Naturals Air Freshener 500g,Everest Naturals,Home Care,Air Freshener,500g,54.77,84.84,2023-01-01,,Active
+P00187,Verve Naturals Sauces 2L,Verve Naturals,Packaged Food,Sauces,2L,99.31,150.05,2023-01-01,,Active
+P00188,Ember Pro Spices 250ml,Ember Pro,Packaged Food,Spices,250ml,68.63,103.02,2023-01-01,,Active
+P00189,Everest Spices 2L,Everest,Packaged Food,Spices,2L,137.45,208.77,2023-01-01,,Active
+P00190,Crest Select Ready Meals 2L,Crest Select,Packaged Food,Ready Meals,2L,125.06,175.66,2023-01-01,,Active
+P00191,Everest Edible Oil 100g,Everest,Packaged Food,Edible Oil,100g,118.74,190.29,2023-01-01,,Active
+P00192,Verve Gold Sauces 100g,Verve Gold,Packaged Food,Sauces,100g,29.52,42.27,2023-01-01,,Active
+P00193,Ember Pro Ready Meals 1L,Ember Pro,Packaged Food,Ready Meals,1L,32.83,43.51,2023-01-01,2024-10-30,Discontinued
+P00194,Verve Gold Spices 1L,Verve Gold,Packaged Food,Spices,1L,79.73,115.24,2024-06-05,,Launched
+P00195,Everest Instant Noodles 100g,Everest,Packaged Food,Instant Noodles,100g,155.46,223.26,2025-01-05,,Launched
+P00196,Ember Pro Ready Meals 500g,Ember Pro,Packaged Food,Ready Meals,500g,184.75,275.48,2023-01-01,,Active
+P00197,Nova Gold Edible Oil 6-pack,Nova Gold,Packaged Food,Edible Oil,6-pack,60.73,86.7,2023-07-16,,Launched
+P00198,Verve Naturals Ready Meals 200g,Verve Naturals,Packaged Food,Ready Meals,200g,41.28,62.32,2023-01-01,,Active
+P00199,Verve Gold Spices 2L,Verve Gold,Packaged Food,Spices,2L,110.67,146.23,2023-01-01,,Active
+P00200,Verve Naturals Ready Meals 250ml,Verve Naturals,Packaged Food,Ready Meals,250ml,186.75,270.49,2023-01-01,,Active
+P00201,Ember Pro Ready Meals 2L,Ember Pro,Packaged Food,Ready Meals,2L,193.13,295.41,2023-01-01,,Active
+P00202,Nova Gold Ready Meals 500ml,Nova Gold,Packaged Food,Ready Meals,500ml,28.13,38.9,2023-01-01,,Active
+P00203,Ember Pro Spices 6-pack,Ember Pro,Packaged Food,Spices,6-pack,146.74,195.07,2023-01-01,,Active
+P00204,Everest Ready Meals 100g,Everest,Packaged Food,Ready Meals,100g,96.56,146.28,2023-01-01,2024-12-15,Discontinued
+P00205,Everest Sauces 6-pack,Everest,Packaged Food,Sauces,6-pack,47.28,62.46,2023-12-06,,Launched
+P00206,Nova Gold Ready Meals 250ml,Nova Gold,Packaged Food,Ready Meals,250ml,90.05,132.7,2023-01-01,,Active
+P00207,Verve Gold Sauces 6-pack,Verve Gold,Packaged Food,Sauces,6-pack,151.21,218.0,2024-12-13,,Launched
+P00208,Everest Spices 250ml,Everest,Packaged Food,Spices,250ml,83.92,130.31,2023-01-01,,Active
+P00209,Verve Naturals Sauces 500ml,Verve Naturals,Packaged Food,Sauces,500ml,44.22,59.49,2023-01-01,,Active
+P00210,Everest Instant Noodles 1kg,Everest,Packaged Food,Instant Noodles,1kg,35.89,53.07,2023-01-01,2024-11-02,Discontinued
+P00211,Everest Edible Oil 100g,Everest,Packaged Food,Edible Oil,100g,32.21,45.79,2023-01-01,,Active
+P00212,Verve Naturals Edible Oil 1L,Verve Naturals,Packaged Food,Edible Oil,1L,153.21,245.32,2023-01-01,,Active
+P00213,Verve Gold Instant Noodles 100g,Verve Gold,Packaged Food,Instant Noodles,100g,170.06,222.04,2023-01-01,,Active
+P00214,Verve Gold Spices 1L,Verve Gold,Packaged Food,Spices,1L,168.13,270.21,2023-01-01,,Active
+P00215,Verve Naturals Spices 500g,Verve Naturals,Packaged Food,Spices,500g,29.83,41.64,2023-01-01,,Active
+P00216,Verve Gold Instant Noodles 1kg,Verve Gold,Packaged Food,Instant Noodles,1kg,43.77,63.95,2023-01-01,,Active
+P00217,Crest Select Ready Meals 2L,Crest Select,Packaged Food,Ready Meals,2L,138.2,198.78,2023-01-01,,Active
+P00218,Everest Sauces 200g,Everest,Packaged Food,Sauces,200g,137.36,199.59,2023-01-01,,Active
+P00219,Ember Pro Ready Meals 100g,Ember Pro,Packaged Food,Ready Meals,100g,110.15,149.93,2023-01-01,,Active
+P00220,Verve Gold Instant Noodles 500ml,Verve Gold,Packaged Food,Instant Noodles,500ml,164.43,219.08,2023-01-01,,Active
+P00221,Everest Instant Noodles 500g,Everest,Packaged Food,Instant Noodles,500g,115.43,168.58,2023-01-01,,Active
+P00222,Nova Gold Sauces 1L,Nova Gold,Packaged Food,Sauces,1L,181.09,275.82,2023-01-01,,Active
+P00223,Everest Instant Noodles 6-pack,Everest,Packaged Food,Instant Noodles,6-pack,150.43,227.22,2023-01-01,,Active
+P00224,Verve Gold Ready Meals 1L,Verve Gold,Packaged Food,Ready Meals,1L,28.54,38.32,2023-01-01,,Active
+P00225,Nova Gold Edible Oil 500g,Nova Gold,Packaged Food,Edible Oil,500g,140.43,217.56,2023-01-01,,Active
+P00226,Verve Naturals Instant Noodles 250ml,Verve Naturals,Packaged Food,Instant Noodles,250ml,52.38,70.33,2023-01-01,,Active
+P00227,Ember Pro Spices 500ml,Ember Pro,Packaged Food,Spices,500ml,82.63,117.95,2023-04-20,,Launched
+P00228,Nova Gold Spices 6-pack,Nova Gold,Packaged Food,Spices,6-pack,114.7,180.85,2023-01-01,,Active
+P00229,Verve Naturals Sauces 2L,Verve Naturals,Packaged Food,Sauces,2L,185.29,279.42,2023-01-01,,Active
+P00230,Everest Sauces 250ml,Everest,Packaged Food,Sauces,250ml,121.8,159.66,2023-01-01,,Active
+P00231,Nova Gold Spices 500g,Nova Gold,Packaged Food,Spices,500g,21.78,34.01,2023-01-01,,Active
+P00232,Orchid Pro Curd 2L,Orchid Pro,Dairy,Curd,2L,79.65,101.1,2023-01-01,,Active
+P00233,Orchid Fresh Curd 500g,Orchid Fresh,Dairy,Curd,500g,128.6,166.72,2023-01-01,,Active
+P00234,Crest Pro Paneer 2L,Crest Pro,Dairy,Paneer,2L,85.05,121.91,2023-01-01,,Active
+P00235,Bloom Pro Curd 100g,Bloom Pro,Dairy,Curd,100g,85.32,106.63,2023-01-01,,Active
+P00236,Orchid Fresh Paneer 250ml,Orchid Fresh,Dairy,Paneer,250ml,52.79,73.05,2023-01-01,,Active
+P00237,Bloom Pro Cheese 500ml,Bloom Pro,Dairy,Cheese,500ml,118.01,154.4,2023-01-01,,Active
+P00238,Orchid Pro Paneer 250ml,Orchid Pro,Dairy,Paneer,250ml,80.63,112.68,2023-01-01,,Active
+P00239,Nova Select Butter 100g,Nova Select,Dairy,Butter,100g,71.31,90.04,2024-05-14,,Launched
+P00240,Bloom Pro Butter 1kg,Bloom Pro,Dairy,Butter,1kg,33.61,46.45,2023-01-01,,Active
+P00241,Orchid Pro Butter 500g,Orchid Pro,Dairy,Butter,500g,19.44,27.33,2024-12-04,,Launched
+P00242,Orchid Gold Butter 500ml,Orchid Gold,Dairy,Butter,500ml,77.25,111.83,2023-01-01,,Active
+P00243,Nova Select Curd 1L,Nova Select,Dairy,Curd,1L,54.12,73.43,2023-01-01,,Active
+P00244,Summit Select Butter 2L,Summit Select,Dairy,Butter,2L,129.25,186.63,2023-01-01,,Active
+P00245,Crest Pro Cheese 500ml,Crest Pro,Dairy,Cheese,500ml,61.57,79.47,2024-04-06,,Launched
+P00246,Orchid Fresh Milk 500g,Orchid Fresh,Dairy,Milk,500g,54.11,73.56,2023-01-01,,Active
+P00247,Orchid Gold Milk 500g,Orchid Gold,Dairy,Milk,500g,101.85,137.37,2023-01-01,,Active
+P00248,Orchid Pro Curd 1L,Orchid Pro,Dairy,Curd,1L,80.56,108.67,2023-01-01,,Active
+P00249,Bloom Pro Milk 6-pack,Bloom Pro,Dairy,Milk,6-pack,29.08,38.55,2023-09-19,,Launched
+P00250,Summit Select Paneer 500g,Summit Select,Dairy,Paneer,500g,99.26,127.43,2023-01-01,,Active
+P00251,Summit Select Curd 1kg,Summit Select,Dairy,Curd,1kg,113.29,165.82,2023-01-01,,Active
+P00252,Bloom Pro Milk 500ml,Bloom Pro,Dairy,Milk,500ml,78.72,96.64,2023-01-01,,Active
+P00253,Bloom Pro Cheese 1kg,Bloom Pro,Dairy,Cheese,1kg,53.66,77.77,2023-01-01,,Active
+P00254,Summit Select Milk 200g,Summit Select,Dairy,Milk,200g,69.14,99.92,2023-01-01,,Active
+P00255,Crest Pro Milk 2L,Crest Pro,Dairy,Milk,2L,114.98,164.01,2023-01-01,,Active
+P00256,Orchid Fresh Paneer 500ml,Orchid Fresh,Dairy,Paneer,500ml,41.51,60.42,2023-01-01,,Active
+P00257,Orchid Fresh Curd 500g,Orchid Fresh,Dairy,Curd,500g,63.98,80.22,2023-01-01,2025-02-04,Discontinued
+P00258,Orchid Pro Milk 1kg,Orchid Pro,Dairy,Milk,1kg,100.92,130.02,2023-01-01,,Active
+P00259,Nova Select Cheese 250ml,Nova Select,Dairy,Cheese,250ml,43.07,63.18,2023-01-01,,Active
+P00260,Crest Pro Butter 1L,Crest Pro,Dairy,Butter,1L,83.52,121.47,2023-01-01,,Active
+P00261,Orchid Fresh Paneer 2L,Orchid Fresh,Dairy,Paneer,2L,59.82,77.38,2023-01-01,2025-11-17,Discontinued
+P00262,Orchid Fresh Paneer 200g,Orchid Fresh,Dairy,Paneer,200g,103.01,131.54,2023-01-01,,Active
+P00263,Orchid Fresh Milk 500ml,Orchid Fresh,Dairy,Milk,500ml,125.65,156.59,2023-01-01,,Active
+P00264,Bloom Pro Butter 250ml,Bloom Pro,Dairy,Butter,250ml,113.96,139.36,2023-01-01,,Active
+P00265,Bloom Pro Paneer 100g,Bloom Pro,Dairy,Paneer,100g,22.03,31.4,2023-03-26,,Launched
+P00266,Orchid Gold Milk 250ml,Orchid Gold,Dairy,Milk,250ml,57.95,73.92,2023-01-01,,Active
+P00267,Orchid Pro Curd 2L,Orchid Pro,Dairy,Curd,2L,20.27,29.08,2023-01-01,,Active
+P00268,Summit Select Curd 250ml,Summit Select,Dairy,Curd,250ml,92.18,118.97,2023-01-01,,Active
+P00269,Summit Select Cheese 6-pack,Summit Select,Dairy,Cheese,6-pack,105.49,129.27,2023-01-01,,Active
+P00270,Summit Select Cheese 100g,Summit Select,Dairy,Cheese,100g,106.96,141.76,2023-01-01,,Active
+P00271,Pioneer Pro Protein 2L,Pioneer Pro,Health & Wellness,Protein,2L,186.04,415.54,2023-01-01,,Active
+P00272,Aura Vitamins 1kg,Aura,Health & Wellness,Vitamins,1kg,309.35,704.53,2023-01-01,,Active
+P00273,Pioneer Pro Protein 1L,Pioneer Pro,Health & Wellness,Protein,1L,377.38,781.67,2023-01-01,,Active
+P00274,Aura Immunity 1kg,Aura,Health & Wellness,Immunity,1kg,432.26,1017.7,2023-01-01,,Active
+P00275,Pioneer Pro Immunity 1kg,Pioneer Pro,Health & Wellness,Immunity,1kg,380.41,865.58,2023-01-01,,Active
+P00276,Aura Immunity 500g,Aura,Health & Wellness,Immunity,500g,135.65,297.6,2023-01-01,,Active
+P00277,Everest Pro Immunity 200g,Everest Pro,Health & Wellness,Immunity,200g,429.81,1009.69,2023-01-01,,Active
+P00278,Aura Immunity 1L,Aura,Health & Wellness,Immunity,1L,475.08,848.87,2023-01-01,,Active
+P00279,Aura Ayurvedic 500ml,Aura,Health & Wellness,Ayurvedic,500ml,211.3,527.12,2023-01-01,,Active
+P00280,Orchid Select Protein 2L,Orchid Select,Health & Wellness,Protein,2L,214.51,454.26,2023-01-01,,Active
+P00281,Pioneer Pro Immunity 6-pack,Pioneer Pro,Health & Wellness,Immunity,6-pack,323.34,616.04,2024-12-14,,Launched
+P00282,Orchid Select Vitamins 1kg,Orchid Select,Health & Wellness,Vitamins,1kg,224.85,485.27,2023-01-01,,Active
+P00283,Everest Pro Vitamins 1L,Everest Pro,Health & Wellness,Vitamins,1L,171.03,371.33,2023-01-01,,Active
+P00284,Orchid Select Ayurvedic 200g,Orchid Select,Health & Wellness,Ayurvedic,200g,281.82,567.89,2023-01-01,,Active
+P00285,Aura Protein 2L,Aura,Health & Wellness,Protein,2L,101.98,187.43,2023-01-01,,Active
+P00286,Orchid Select Ayurvedic 1L,Orchid Select,Health & Wellness,Ayurvedic,1L,304.21,751.14,2023-01-01,,Active
+P00287,Everest Pro Ayurvedic 500ml,Everest Pro,Health & Wellness,Ayurvedic,500ml,86.34,218.64,2023-01-01,,Active
+P00288,Pioneer Pro Vitamins 250ml,Pioneer Pro,Health & Wellness,Vitamins,250ml,366.38,880.39,2023-01-01,,Active
+P00289,Pioneer Pro Vitamins 1kg,Pioneer Pro,Health & Wellness,Vitamins,1kg,506.42,893.9,2023-01-01,,Active
+P00290,Pioneer Pro Ayurvedic 1L,Pioneer Pro,Health & Wellness,Ayurvedic,1L,167.56,314.79,2023-01-01,,Active
+P00291,Everest Pro Immunity 6-pack,Everest Pro,Health & Wellness,Immunity,6-pack,515.26,1019.44,2023-01-01,,Active
+P00292,Aura Protein 1L,Aura,Health & Wellness,Protein,1L,420.37,784.21,2024-06-11,,Launched
+P00293,Pioneer Pro Ayurvedic 500ml,Pioneer Pro,Health & Wellness,Ayurvedic,500ml,86.75,194.34,2023-01-01,,Active
+P00294,Everest Pro Ayurvedic 500g,Everest Pro,Health & Wellness,Ayurvedic,500g,179.49,401.47,2023-01-01,,Active
+P00295,Orchid Select Ayurvedic 200g,Orchid Select,Health & Wellness,Ayurvedic,200g,157.99,359.69,2023-01-01,,Active
+P00296,Everest Pro Ayurvedic 500g,Everest Pro,Health & Wellness,Ayurvedic,500g,213.86,389.09,2023-01-01,,Active
+P00297,Orchid Select Protein 250ml,Orchid Select,Health & Wellness,Protein,250ml,292.74,555.62,2023-01-01,,Active
+P00298,Pioneer Pro Protein 2L,Pioneer Pro,Health & Wellness,Protein,2L,277.66,704.77,2023-01-01,,Active
+P00299,Orchid Select Protein 500ml,Orchid Select,Health & Wellness,Protein,500ml,165.19,309.91,2023-01-01,,Active
+P00300,Orchid Select Protein 1kg,Orchid Select,Health & Wellness,Protein,1kg,587.47,1180.8,2023-01-01,,Active
