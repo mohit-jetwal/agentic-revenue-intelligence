@@ -21,9 +21,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from data.repositories.point_in_time import PointInTimeView
 
 
 class DataAccessError(RuntimeError):
@@ -32,6 +35,30 @@ class DataAccessError(RuntimeError):
 
 class DatasetNotFoundError(DataAccessError):
     """Raised when a requested table/dataset does not exist."""
+
+
+class ResultTruncatedError(DataAccessError):
+    """Raised when a query hit the row cap and results were cut short.
+
+    Silence is the dangerous outcome here. A feature computed over a truncated
+    panel is not obviously wrong - the lags and rolling windows simply stop
+    early, the frame looks well-formed, and the model trains on a quietly
+    mutilated history. Brief section 32 is explicit that incorrect results must
+    not be returned silently, so hitting the cap is an error, not a shrug.
+
+    Callers who genuinely want a bounded peek pass ``max_rows`` explicitly and
+    are then opting into truncation with their eyes open.
+    """
+
+    def __init__(self, table: str, limit: int) -> None:
+        super().__init__(
+            f"Query on {table!r} returned exactly the {limit:,}-row cap, so results "
+            f"were almost certainly truncated. Narrow the filters, or pass an "
+            f"explicit max_rows to accept a bounded result, or raise "
+            f"DATA__MAX_RESULT_ROWS."
+        )
+        self.table = table
+        self.limit = limit
 
 
 class DataRepository(ABC):
@@ -44,7 +71,29 @@ class DataRepository(ABC):
     All ``get_*`` methods share the same optional filter arguments. Filters are
     pushed down to the engine rather than applied in pandas afterwards, so a
     narrow query stays cheap regardless of table size.
+
+    **Point-in-time access.** Time-series methods accept ``as_of_date``, which
+    restricts observed data to what was knowable on that date. Which tables that
+    restricts, and which are legitimately knowable in advance, is decided by
+    :mod:`data.repositories.availability`.
+
+    Prefer :meth:`as_of` over the keyword. Both apply the same rule, but a
+    keyword can be forgotten on one call in one feature builder and leak the
+    future with nothing to catch it, whereas a view has no method that would
+    return future data at all. Feature builders in ``features/`` accept only a
+    view, for exactly that reason.
     """
+
+    def as_of(self, as_of_date: date) -> PointInTimeView:
+        """Return a view of this repository frozen at ``as_of_date``.
+
+        Every read through the view is restricted to what was knowable then.
+        This is the interface feature engineering and model training should use;
+        the raw repository is for ad-hoc analysis and for serving current state.
+        """
+        from data.repositories.point_in_time import PointInTimeView
+
+        return PointInTimeView(self, as_of_date)
 
     # -- dimensions ---------------------------------------------------------
 
@@ -55,6 +104,7 @@ class DataRepository(ABC):
         product_ids: list[str] | None = None,
         category: str | None = None,
         brand: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         """Product master. One row per product."""
 
@@ -65,6 +115,7 @@ class DataRepository(ABC):
         store_ids: list[str] | None = None,
         region: str | None = None,
         channel: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         """Store master. One row per store."""
 
@@ -75,6 +126,7 @@ class DataRepository(ABC):
         customer_ids: list[str] | None = None,
         segment: str | None = None,
         region: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         """Customer master. Non-PII attributes only (segment, region, tier)."""
 
@@ -84,8 +136,14 @@ class DataRepository(ABC):
         *,
         start_date: date | None = None,
         end_date: date | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
-        """Date dimension: week, month, quarter, holiday and festival flags."""
+        """Date dimension: week, month, quarter, holiday and festival flags.
+
+        Deliberately has no ``as_of_date``: holidays and the financial calendar
+        are known years ahead, so cutting them at an as-of date would remove
+        information a planner genuinely has.
+        """
 
     @abstractmethod
     def get_product_relationships(
@@ -93,6 +151,7 @@ class DataRepository(ABC):
         *,
         product_ids: list[str] | None = None,
         relationship_type: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         """Known substitute/complement pairs, used to scope cross-price work.
 
@@ -112,7 +171,10 @@ class DataRepository(ABC):
         channel: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
         columns: list[str] | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         """Daily sales fact at product x store x date grain."""
 
@@ -124,8 +186,16 @@ class DataRepository(ABC):
         store_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
-        """Regular and selling price by product x store x date."""
+        """Regular and selling price by product x store x date.
+
+        Classified known-in-advance: a price file is set before its effective
+        date, so ``as_of_date`` does not cut it. See
+        :mod:`data.repositories.availability`.
+        """
 
     @abstractmethod
     def get_inventory(
@@ -135,6 +205,9 @@ class DataRepository(ABC):
         store_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         """Daily inventory position and stockout flags.
 
@@ -151,8 +224,16 @@ class DataRepository(ABC):
         promotion_type: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
-        """Promotion events with type, depth, spend and mechanics flags."""
+        """Promotion events with type, depth, spend and mechanics flags.
+
+        Classified known-in-advance, because promotion mechanics are agreed with
+        retailers weeks ahead. A forward-dated row's *actuals* - realised spend
+        and units - are still unknowable and are nulled beyond ``as_of_date``.
+        """
 
     @abstractmethod
     def get_trade_promotions(
@@ -163,8 +244,17 @@ class DataRepository(ABC):
         region: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
-        """Trade promotion plans: planned/actual spend, expected/actual uplift, ROI."""
+        """Trade promotion plans: planned/actual spend, expected/actual uplift, ROI.
+
+        Classified observed despite being planned: the table is dominated by
+        after-the-fact columns (actual spend, actual uplift, realised ROI), and
+        letting those past the as-of date would leak the very outcome a model is
+        trying to predict.
+        """
 
     @abstractmethod
     def get_competitor_prices(
@@ -174,8 +264,15 @@ class DataRepository(ABC):
         competitor_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
-        """Competitor price and promotion observations by product x date."""
+        """Competitor price and promotion observations by product x date.
+
+        Observed, not planned. We may know our own future price list; we never
+        know a rival's until it hits the shelf.
+        """
 
     # -- generic ------------------------------------------------------------
 

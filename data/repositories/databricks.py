@@ -1,4 +1,4 @@
-"""Databricks repository: Unity Catalog Gold tables via Databricks SQL.
+﻿"""Databricks repository: Unity Catalog Gold tables via Databricks SQL.
 
 Stage 2 implementation of :class:`~data.repositories.base.DataRepository`.
 
@@ -79,6 +79,7 @@ class DatabricksDataRepository(DataRepository):
         product_ids: list[str] | None = None,
         category: str | None = None,
         brand: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_products")
 
@@ -88,6 +89,7 @@ class DatabricksDataRepository(DataRepository):
         store_ids: list[str] | None = None,
         region: str | None = None,
         channel: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_stores")
 
@@ -97,6 +99,7 @@ class DatabricksDataRepository(DataRepository):
         customer_ids: list[str] | None = None,
         segment: str | None = None,
         region: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_customers")
 
@@ -105,6 +108,7 @@ class DatabricksDataRepository(DataRepository):
         *,
         start_date: date | None = None,
         end_date: date | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_calendar")
 
@@ -113,10 +117,18 @@ class DatabricksDataRepository(DataRepository):
         *,
         product_ids: list[str] | None = None,
         relationship_type: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_product_relationships")
 
     # -- facts --------------------------------------------------------------
+
+    # Signatures track the ABC exactly, including `as_of_date`. In Stage 2 the
+    # as-of cut becomes a `WHERE date <= ?` predicate pushed into Databricks SQL
+    # - or, better, a Delta time-travel read (`VERSION AS OF` / `TIMESTAMP AS
+    # OF`) where the question is "what did we believe on date D", as opposed to
+    # "what had happened by date D". Those are different questions and Delta can
+    # answer both; the local Parquet layer can only answer the second.
 
     def get_sales(
         self,
@@ -127,7 +139,10 @@ class DatabricksDataRepository(DataRepository):
         channel: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
         columns: list[str] | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_sales")
 
@@ -138,6 +153,9 @@ class DatabricksDataRepository(DataRepository):
         store_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_pricing")
 
@@ -148,6 +166,9 @@ class DatabricksDataRepository(DataRepository):
         store_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_inventory")
 
@@ -159,6 +180,9 @@ class DatabricksDataRepository(DataRepository):
         promotion_type: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_promotions")
 
@@ -170,6 +194,9 @@ class DatabricksDataRepository(DataRepository):
         region: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_trade_promotions")
 
@@ -180,6 +207,9 @@ class DatabricksDataRepository(DataRepository):
         competitor_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         raise self._not_yet("get_competitor_prices")
 

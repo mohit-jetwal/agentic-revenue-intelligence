@@ -4,10 +4,11 @@ Agentic decision intelligence for CPG/Retail revenue, pricing and promotion
 management. Claude plans, selects tools, interprets evidence and re-plans.
 Deterministic ML, statistical and optimisation models produce every number.
 
-> **Status: Stage 1, Step 2 — synthetic data foundation.**
-> The skeleton runs and the dataset generator produces a **causally simulated**
-> CPG/Retail dataset whose relationships are provably recoverable. No models or
-> agents yet. See [Roadmap](#roadmap).
+> **Status: Stage 1, Step 3 — data access, contracts and feature engineering.**
+> The dataset is causally simulated with recoverable relationships, and models
+> now reach it through a repository → contract → feature layer that makes
+> future-data leakage **structurally impossible**. No models or agents yet.
+> See [Roadmap](#roadmap).
 
 ---
 
@@ -156,6 +157,78 @@ gives the quality checks real defects to catch.
 
 ---
 
+## The feature layer
+
+```
+DataRepository → PointInTimeView → FeatureEngineer → FeatureRepository → X, y
+```
+
+A model receives a `FeatureSet` and cannot tell whether it came from Parquet,
+Delta or a Databricks Feature Table. That is the stated goal — but the property
+that actually earns the layer is **point-in-time correctness**, because every
+model in Steps 4–11 is temporal and a single leaked future value produces a model
+that backtests beautifully and fails in production.
+
+### Availability is per-table, not global
+
+"Clamp everything to the as-of date" is the obvious approach and it is wrong. A
+planner on 1 June genuinely knows the promotion calendar for 10–24 June, and
+knows next Diwali's date. So each table is classified:
+
+| Class | Tables | Visible past as-of? |
+|---|---|---|
+| `OBSERVED` | sales, inventory, competitor prices, trade promos | **No** |
+| `KNOWN_IN_ADVANCE` | calendar, promotions, pricing | **Yes** — they're planned |
+| `STATIC` | products, stores, customers, relationships | N/A |
+
+The subtle half: a *future* promotion's schedule is knowable, but its realised
+spend is not. Those columns are nulled beyond the as-of date.
+
+### Leakage prevention is structural
+
+```python
+view = repo.as_of(date(2025, 12, 3))
+engineer = FeatureEngineer(view)      # a bare repository raises TypeError
+```
+
+An `as_of_date` keyword can be forgotten — one omission in one builder and the
+model trains on the future. A view has no method that returns future observed
+data, so the mistake is unavailable rather than discouraged. Three more guards:
+
+- **One shift helper.** `df.groupby(k).rolling(7)` reads fine and silently
+  includes the current row. All temporal features route through
+  `rolling_on_shifted`, which shifts first and rejects `periods < 1`.
+- **Target-derived columns dropped.** `revenue = units × price`, so revenue plus
+  price recovers the target exactly. Dropped centrally, not left to each model.
+- **Forward-looking features declared.** Exactly three, each with a written
+  justification, pinned by an allow-list the tests assert against.
+
+### The test that matters
+
+Build features twice — once from the full dataset, once from a dataset
+*physically truncated* at the as-of date. For rows on or before that date, the
+two must be **identical**. Any feature reaching forward makes them diverge.
+
+It needs no knowledge of which feature leaked, so it keeps holding as Steps 4–11
+add more.
+
+```powershell
+uv run pytest tests/leakage -v
+```
+
+### Contracts
+
+Pandera schemas at the repository boundary (columns, dtypes, ranges, cross-column
+identities), opt-in per call. Distinct from Step 2's `data/validation`, which
+checks cross-row *business invariants* over a whole dataset — different problem,
+different tool. Reversing Step 2's "no Pandera" decision is
+[explained in the docs](docs/features/feature-catalogue.md).
+
+Reference: [feature catalogue](docs/features/feature-catalogue.md) ·
+[Databricks migration](docs/databricks_migration.md)
+
+---
+
 ## Architecture
 
 ```
@@ -237,15 +310,21 @@ ml/                 8 model interfaces (baseline, forecasting, uplift,
 data/
 ├── generation/     causal simulation: generators, scenarios, ground truth
 ├── validation/     business invariants + relationship-recovery tests
-├── repositories/   Local (DuckDB/Parquet) + Databricks implementations
+├── contracts/      Pandera schemas, one per gold table
+├── repositories/   Local (DuckDB/Parquet) + Databricks + point-in-time + sampling
 ├── sample/         committed CSV extracts
 └── local/          generated output — git-ignored
-configs/data/       smoke · dev · stress dataset profiles (YAML)
+features/
+├── engineering/    lag · rolling · time · price · promo · inventory · entity
+├── contracts/      feature specs, groups, model requirements, lineage
+├── repositories/   Local (opt-in materialisation) + Databricks stub
+└── datasets/       the five model-ready builders
+configs/            data/ profiles · features/features.yaml
 databricks/         Stage 2. See databricks/README.md
 prompts/            versioned prompts: <agent>/<version>.md
-notebooks/          data_validation/01_data_validation_eda.ipynb
-docs/data/          data dictionary · simulation design
-tests/              unit · integration · data · statistical
+notebooks/          data_validation/ · feature_validation/
+docs/               data/ · features/ · databricks_migration.md
+tests/              unit · integration · data · statistical · features · leakage
 ```
 
 `app/`, `ml/` and `data/` are top-level packages per the project specification.
@@ -314,18 +393,22 @@ Stated plainly, because "why isn't X here" is a fair question:
 
 ## Roadmap
 
-**Stage 1 — local MVP.** 1 skeleton ✅ · 2 synthetic data ✅ · 3 repository ·
-4 baseline · 5 forecasting · 6 promo uplift · 7 trade-promo optimisation ·
-8 price elasticity · 9 cross-price elasticity · 10 price optimisation ·
-11 scenario engine · 12 MLflow · 13 tool interfaces · 14 Claude ·
-15 LangGraph Supervisor · 16 agentic loop · 17 Critic · 18 re-planning ·
-19 FastAPI · 20 Streamlit · 21 agent evaluation · 22 Docker ·
+**Stage 1 — local MVP.** 1 skeleton ✅ · 2 synthetic data ✅ ·
+3 data access & features ✅ · 4 baseline · 5 forecasting · 6 promo uplift ·
+7 trade-promo optimisation · 8 price elasticity · 9 cross-price elasticity ·
+10 price optimisation · 11 scenario engine · 12 MLflow · 13 tool interfaces ·
+14 Claude · 15 LangGraph Supervisor · 16 agentic loop · 17 Critic ·
+18 re-planning · 19 FastAPI · 20 Streamlit · 21 agent evaluation · 22 Docker ·
 23 end-to-end validation
 
-Step 3 note: `LocalDataRepository`'s read path was pulled forward into Step 2 —
-statistical validation needed it, and §36 requires the data to be reachable
-through the abstraction. Step 3 adds the SQLite application-state store, indexes
-and the SQL security layer.
+Step 4 onward consumes `features/datasets/` — each model gets a builder that
+already encodes its framing (which rows are eligible, what must be excluded to
+keep the estimate honest) and is scored against Step 2's hidden ground truth.
+
+Deferred from Step 3: the SQLite application-state store (investigations, traces,
+feedback) is not built yet — nothing writes to it until Step 19. `DATA_BACKEND=postgres`
+is documented as a switch point at `Container.data_repository` rather than
+implemented, since a second analytical backend has no consumer.
 
 **Stage 2 — Databricks production.** Unity Catalog · Bronze/Silver/Gold ·
 feature engineering · Databricks MLflow · Model Registry · Model Serving ·

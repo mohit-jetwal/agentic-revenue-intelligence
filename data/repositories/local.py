@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import re
 import threading
+import time
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -36,10 +37,13 @@ import duckdb
 import pandas as pd
 
 from app.observability.logging import get_logger
+from data.contracts.tables import contract_for
+from data.repositories.availability import clamp_window
 from data.repositories.base import (
     DataAccessError,
     DataRepository,
     DatasetNotFoundError,
+    ResultTruncatedError,
 )
 
 logger = get_logger(__name__)
@@ -195,6 +199,47 @@ class LocalDataRepository(DataRepository):
             clauses.append(f"{column} <= ?")
             parameters.append(end)
 
+    def _finish(
+        self,
+        table: str,
+        frame: pd.DataFrame,
+        *,
+        limit: int,
+        explicit_limit: bool,
+        validate: bool,
+        started: float,
+        filters: dict[str, Any],
+    ) -> pd.DataFrame:
+        """Common tail for every read: truncation guard, contract, logging.
+
+        The truncation guard is the important part. Every query carries a
+        ``LIMIT``, so a large slice comes back quietly cut short - and a feature
+        computed over a truncated panel is not obviously wrong. The lags and
+        rolling windows simply stop early, the frame looks well-formed, and the
+        model trains on a mutilated history. Brief section 32 forbids returning
+        incorrect results silently, so hitting the cap without having asked for
+        a bounded result is an error.
+        """
+        rows = len(frame)
+        if rows >= limit and not explicit_limit:
+            logger.error("repository.truncated", table=table, rows=rows, limit=limit)
+            raise ResultTruncatedError(table, limit)
+
+        if validate:
+            contract = contract_for(table)
+            if contract is not None:
+                frame = contract.validate(frame)
+
+        # Section 33: what was asked for and what came back, never the data.
+        logger.debug(
+            "repository.read",
+            table=table,
+            rows=rows,
+            duration_ms=int((time.perf_counter() - started) * 1000),
+            **{k: v for k, v in filters.items() if v is not None},
+        )
+        return frame
+
     def _select(
         self,
         table: str,
@@ -203,7 +248,12 @@ class LocalDataRepository(DataRepository):
         *,
         columns: list[str] | None = None,
         limit: int | None = None,
+        validate: bool = False,
+        filters: dict[str, Any] | None = None,
     ) -> pd.DataFrame:
+        started = time.perf_counter()
+        effective_limit = int(limit or self.max_result_rows)
+
         projection = self._projection(columns)
         # Safe against injection: `projection` is identifier-validated above, the
         # FROM clause is a filesystem path resolved by `_source`, every WHERE
@@ -211,8 +261,18 @@ class LocalDataRepository(DataRepository):
         sql = f"SELECT {projection} FROM {self._source(table)}"  # nosec B608
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
-        sql += f" LIMIT {int(limit or self.max_result_rows)}"
-        return self._run(sql, parameters)
+        sql += f" LIMIT {effective_limit}"
+
+        frame = self._run(sql, parameters)
+        return self._finish(
+            table,
+            frame,
+            limit=effective_limit,
+            explicit_limit=limit is not None,
+            validate=validate,
+            started=started,
+            filters=filters or {},
+        )
 
     # -- dimensions ---------------------------------------------------------
 
@@ -222,13 +282,16 @@ class LocalDataRepository(DataRepository):
         product_ids: list[str] | None = None,
         category: str | None = None,
         brand: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         clauses: list[str] = []
         parameters: list[Any] = []
         self._add_in(clauses, parameters, "product_id", product_ids)
         self._add_equals(clauses, parameters, "category", category)
         self._add_equals(clauses, parameters, "brand", brand)
-        return self._select("products", clauses, parameters)
+        return self._select(
+            "products", clauses, parameters, validate=validate, filters={"category": category}
+        )
 
     def get_stores(
         self,
@@ -236,13 +299,16 @@ class LocalDataRepository(DataRepository):
         store_ids: list[str] | None = None,
         region: str | None = None,
         channel: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         clauses: list[str] = []
         parameters: list[Any] = []
         self._add_in(clauses, parameters, "store_id", store_ids)
         self._add_equals(clauses, parameters, "region", region)
         self._add_equals(clauses, parameters, "channel", channel)
-        return self._select("stores", clauses, parameters)
+        return self._select(
+            "stores", clauses, parameters, validate=validate, filters={"region": region}
+        )
 
     def get_customers(
         self,
@@ -250,32 +316,37 @@ class LocalDataRepository(DataRepository):
         customer_ids: list[str] | None = None,
         segment: str | None = None,
         region: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         clauses: list[str] = []
         parameters: list[Any] = []
         self._add_in(clauses, parameters, "customer_id", customer_ids)
         self._add_equals(clauses, parameters, "segment", segment)
         self._add_equals(clauses, parameters, "region", region)
-        return self._select("customers", clauses, parameters)
+        return self._select(
+            "customers", clauses, parameters, validate=validate, filters={"segment": segment}
+        )
 
     def get_calendar(
         self,
         *,
         start_date: date | None = None,
         end_date: date | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         clauses: list[str] = []
         parameters: list[Any] = []
         self._add_date_range(clauses, parameters, "date", start_date, end_date)
         # The calendar is small and callers usually want the whole span; the
-        # default row cap would silently truncate three years of dates.
-        return self._select("calendar", clauses, parameters, limit=200_000)
+        # default row cap would truncate three years of dates and now raise.
+        return self._select("calendar", clauses, parameters, limit=200_000, validate=validate)
 
     def get_product_relationships(
         self,
         *,
         product_ids: list[str] | None = None,
         relationship_type: str | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
         clauses: list[str] = []
         parameters: list[Any] = []
@@ -287,7 +358,13 @@ class LocalDataRepository(DataRepository):
             parameters.extend(product_ids)
             parameters.extend(product_ids)
         self._add_equals(clauses, parameters, "relationship_type", relationship_type)
-        return self._select("product_relationships", clauses, parameters)
+        return self._select(
+            "product_relationships",
+            clauses,
+            parameters,
+            validate=validate,
+            filters={"relationship_type": relationship_type},
+        )
 
     # -- facts --------------------------------------------------------------
 
@@ -300,8 +377,14 @@ class LocalDataRepository(DataRepository):
         channel: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
         columns: list[str] | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
+        started = time.perf_counter()
+        start_date, end_date = clamp_window("sales_daily", start_date, end_date, as_of_date)
+
         clauses: list[str] = []
         parameters: list[Any] = []
         self._add_in(clauses, parameters, "s.product_id", product_ids)
@@ -325,8 +408,29 @@ class LocalDataRepository(DataRepository):
 
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
-        sql += f" LIMIT {self.max_result_rows}"
-        return self._run(sql, parameters)
+        effective_limit = int(max_rows or self.max_result_rows)
+        sql += f" LIMIT {effective_limit}"
+
+        frame = self._run(sql, parameters)
+        return self._finish(
+            "sales_daily",
+            frame,
+            limit=effective_limit,
+            explicit_limit=max_rows is not None,
+            # A projected subset cannot satisfy a whole-table contract, so
+            # validation is skipped rather than failing on absent columns.
+            validate=validate and columns is None,
+            started=started,
+            filters={
+                "products": len(product_ids) if product_ids else None,
+                "stores": len(store_ids) if store_ids else None,
+                "region": region,
+                "channel": channel,
+                "start_date": str(start_date) if start_date else None,
+                "end_date": str(end_date) if end_date else None,
+                "as_of_date": str(as_of_date) if as_of_date else None,
+            },
+        )
 
     def get_pricing(
         self,
@@ -335,13 +439,24 @@ class LocalDataRepository(DataRepository):
         store_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
+        start_date, end_date = clamp_window("pricing", start_date, end_date, as_of_date)
         clauses: list[str] = []
         parameters: list[Any] = []
         self._add_in(clauses, parameters, "product_id", product_ids)
         self._add_in(clauses, parameters, "store_id", store_ids)
         self._add_date_range(clauses, parameters, "date", start_date, end_date)
-        return self._select("pricing", clauses, parameters)
+        return self._select(
+            "pricing",
+            clauses,
+            parameters,
+            limit=max_rows,
+            validate=validate,
+            filters={"products": len(product_ids) if product_ids else None},
+        )
 
     def get_inventory(
         self,
@@ -350,13 +465,24 @@ class LocalDataRepository(DataRepository):
         store_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
+        start_date, end_date = clamp_window("inventory", start_date, end_date, as_of_date)
         clauses: list[str] = []
         parameters: list[Any] = []
         self._add_in(clauses, parameters, "product_id", product_ids)
         self._add_in(clauses, parameters, "store_id", store_ids)
         self._add_date_range(clauses, parameters, "date", start_date, end_date)
-        return self._select("inventory", clauses, parameters)
+        return self._select(
+            "inventory",
+            clauses,
+            parameters,
+            limit=max_rows,
+            validate=validate,
+            filters={"products": len(product_ids) if product_ids else None},
+        )
 
     def get_promotions(
         self,
@@ -366,7 +492,11 @@ class LocalDataRepository(DataRepository):
         promotion_type: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
+        start_date, end_date = clamp_window("promotions", start_date, end_date, as_of_date)
         clauses: list[str] = []
         parameters: list[Any] = []
         self._add_in(clauses, parameters, "product_id", product_ids)
@@ -381,7 +511,14 @@ class LocalDataRepository(DataRepository):
         if end_date is not None:
             clauses.append("start_date <= ?")
             parameters.append(end_date)
-        return self._select("promotions", clauses, parameters)
+        return self._select(
+            "promotions",
+            clauses,
+            parameters,
+            limit=max_rows,
+            validate=validate,
+            filters={"promotion_type": promotion_type},
+        )
 
     def get_trade_promotions(
         self,
@@ -391,7 +528,11 @@ class LocalDataRepository(DataRepository):
         region: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
+        start_date, end_date = clamp_window("trade_promotions", start_date, end_date, as_of_date)
         clauses: list[str] = []
         parameters: list[Any] = []
         self._add_in(clauses, parameters, "product_id", product_ids)
@@ -403,7 +544,14 @@ class LocalDataRepository(DataRepository):
         if end_date is not None:
             clauses.append("start_date <= ?")
             parameters.append(end_date)
-        return self._select("trade_promotions", clauses, parameters)
+        return self._select(
+            "trade_promotions",
+            clauses,
+            parameters,
+            limit=max_rows,
+            validate=validate,
+            filters={"retailer": retailer, "region": region},
+        )
 
     def get_competitor_prices(
         self,
@@ -412,13 +560,26 @@ class LocalDataRepository(DataRepository):
         competitor_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
     ) -> pd.DataFrame:
+        start_date, end_date = clamp_window(
+            "competitor_pricing", start_date, end_date, as_of_date
+        )
         clauses: list[str] = []
         parameters: list[Any] = []
         self._add_in(clauses, parameters, "product_id", product_ids)
         self._add_in(clauses, parameters, "competitor_id", competitor_ids)
         self._add_date_range(clauses, parameters, "date", start_date, end_date)
-        return self._select("competitor_pricing", clauses, parameters)
+        return self._select(
+            "competitor_pricing",
+            clauses,
+            parameters,
+            limit=max_rows,
+            validate=validate,
+            filters={"products": len(product_ids) if product_ids else None},
+        )
 
     # -- generic ------------------------------------------------------------
 

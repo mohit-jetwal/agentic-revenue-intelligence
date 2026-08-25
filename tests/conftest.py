@@ -56,6 +56,18 @@ from tests.dataset_fixtures import (  # noqa: F401
     stores,
 )
 
+# Step 3 fixtures: repository, point-in-time view and built feature panels.
+# Same re-export pattern - pytest collects these by name from the conftest
+# namespace, so the imports are deliberately unused here.
+from tests.feature_fixtures import (  # noqa: F401
+    feature_repository,
+    smoke_as_of,
+    smoke_features,
+    smoke_panel_sample,
+    smoke_repository,
+    smoke_view,
+)
+
 _ENV_PREFIXES = (
     "APP__",
     "LLM__",

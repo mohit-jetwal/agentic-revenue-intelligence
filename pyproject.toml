@@ -37,6 +37,7 @@ dependencies = [
     "scipy>=1.13",
     "ortools>=9.11",
     "mlflow>=2.17",
+    "pandera[pandas]>=0.20",
 ]
 
 [project.optional-dependencies]
@@ -115,6 +116,8 @@ markers = [
     "agents: agent / workflow behaviour tests",
     "data: synthetic data generation and invariant tests",
     "statistical: relationship-recovery tests; slower, fit regressions on generated data",
+    "features: feature engineering and feature repository tests",
+    "leakage: point-in-time correctness; the property Steps 4-11 depend on",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
 

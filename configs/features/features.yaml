@@ -1,0 +1,155 @@
+# =============================================================================
+# Feature selection (brief section 26)
+#
+# This file selects WHICH features a given feature set uses. It does not define
+# them - definitions live in features/contracts/catalogue.py, where each one
+# carries its transformation and its temporality.
+#
+# The split is deliberate. A feature *definition* is behaviour and belongs under
+# code review; a *selection* is a knob. Putting definitions in YAML would move
+# real logic out of the type checker and the tests, which is how "configurable"
+# turns into "unreviewable".
+#
+# Every name below must exist in the catalogue. The loader checks this and
+# fails loudly, so a typo or a renamed feature surfaces here rather than as a
+# silently-absent column in a training frame.
+# =============================================================================
+
+feature_version: "v1.0"
+
+# --- logical groups (brief section 22) ---------------------------------------
+groups:
+  demand:
+    - lag_1_units
+    - lag_7_units
+    - lag_14_units
+    - lag_28_units
+    - lag_364_units
+    - rolling_7_units
+    - rolling_14_units
+    - rolling_28_units
+    - rolling_28_units_std
+    - demand_momentum
+    - demand_volatility
+    - demand_trend_28
+
+  price:
+    - selling_price
+    - regular_price
+    - discount_depth
+    - price_index
+    - price_change_pct_7
+    - price_vs_rolling_average
+
+  promotion:
+    - promotion_flag
+    - promotion_discount
+    - promotion_duration
+    - days_into_promotion
+    - days_until_promotion_end
+    - days_since_promotion
+    - promotions_last_28d
+
+  inventory:
+    - inventory_available
+    - inventory_ratio
+    - stockout_yesterday
+    - days_since_stockout
+    - stockouts_last_28d
+
+  competitor:
+    - competitor_price
+    - price_gap
+    - price_ratio
+    - competitor_discount
+    - competitor_promotion_flag
+
+  temporal:
+    - day_of_week
+    - week_of_year
+    - month
+    - weekend_flag
+    - holiday_flag
+    - festival_flag
+    - dow_sin
+    - dow_cos
+    - month_sin
+    - month_cos
+    - time_index
+    - days_to_festival
+
+  product:
+    - category
+    - subcategory
+    - brand
+    - unit_cost
+    - product_age_days
+    - is_new_product
+
+  store:
+    - store_type
+    - channel
+    - region
+    - store_size_sqft
+    - store_age_days
+
+# --- per-dataset selections --------------------------------------------------
+# Which groups each of the five builders (sections 36-40) draws on. Kept here so
+# a change to one model's inputs is a config diff rather than a code change, and
+# so the differences between models are visible side by side.
+datasets:
+  forecasting:
+    target: units
+    groups: [demand, price, promotion, inventory, competitor, temporal, product, store]
+    # Realised promotional spend does not exist over a forecast horizon.
+    include_promotion_spend: false
+
+  price_elasticity:
+    target: units
+    groups: [price, competitor, promotion, temporal, product, store]
+    # Promotional rows carry a price cut and an additive uplift at once, and
+    # stockout rows report supply rather than demand. Both bias the coefficient,
+    # so both are excluded at build time.
+    exclude_promotional_rows: true
+    exclude_stockout_rows: true
+
+  promo_uplift:
+    target: units
+    groups: [demand, promotion, price, temporal, product, store]
+    pre_period_days: 28
+    post_period_days: 14
+
+  cross_price:
+    target: units
+    groups: [price, promotion, temporal, product]
+    # Substitution happens on a shelf, so the grain stays store-level.
+    grain: store
+
+  promo_optimization:
+    groups: [promotion, product, store]
+
+# --- guardrails --------------------------------------------------------------
+validation:
+  # Features permitted to read beyond their row date. Anything else that does so
+  # is leakage. The leakage tests assert this list matches the catalogue exactly,
+  # so a new forward-looking feature has to be added here consciously.
+  allowed_forward_looking:
+    - days_until_promotion_end
+    - days_to_next_promotion
+    - days_to_festival
+
+  # A feature that is null more often than this is not carrying signal and is
+  # usually a broken join. Warn rather than fail - lag_364_units is legitimately
+  # null for the first year of any new product-store.
+  max_null_rate: 0.60
+
+  # Columns that must never appear in a training frame: they are functions of
+  # the target on the same row.
+  forbidden_columns:
+    - revenue
+    - cost
+    - gross_profit
+    - sold_units
+    - closing_inventory
+    - inventory_days
+    - promotion_units
