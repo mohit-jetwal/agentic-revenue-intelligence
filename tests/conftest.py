@@ -68,6 +68,15 @@ from tests.feature_fixtures import (  # noqa: F401
     smoke_view,
 )
 
+# Step 4 fixtures: the known-truth synthetic panel the model tests assert
+# against. Same re-export pattern.
+from tests.model_fixtures import (  # noqa: F401
+    feature_panel,
+    latent_frame,
+    synthetic_panel,
+    trained_model_dir,
+)
+
 _ENV_PREFIXES = (
     "APP__",
     "LLM__",

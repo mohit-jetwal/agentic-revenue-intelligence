@@ -155,6 +155,40 @@ def test_health_checks_isolate_failures() -> None:
     assert "DATABRICKS__HOST" in detail
 
 
+def test_baseline_service_is_reachable_through_the_container(
+    container: Container,
+) -> None:
+    """Step 4's service must be wired, not merely written.
+
+    A service nothing can reach is not a seam - it is dead code that reads like
+    a seam. Every later step gets its baseline through this property.
+    """
+    assert container.baseline_service is not None
+    # Cached like the other components, so a request does not rebuild it.
+    assert container.baseline_service is container.baseline_service
+
+
+def test_baseline_service_construction_does_not_require_a_trained_model(
+    container: Container,
+) -> None:
+    """Building the container must never depend on a training run having
+    happened. On a clean checkout there is no model, and a container that
+    refused to start would make the failure look like a configuration problem
+    rather than a missing artifact."""
+    service = container.baseline_service
+
+    # Reaching `is_available` must answer rather than raise, whatever the state.
+    assert isinstance(service.is_available, bool)
+
+
+def test_baseline_model_is_reported_in_health_checks(container: Container) -> None:
+    """A missing baseline should be visible on /health, not discovered when a
+    user asks a question the platform cannot answer."""
+    names = {name for name, _, _ in container.health_checks()}
+
+    assert "baseline_model" in names
+
+
 def test_tool_registry_is_empty_until_step_13(container: Container) -> None:
     assert len(container.tool_registry) == 0
     assert container.tool_registry.names() == []

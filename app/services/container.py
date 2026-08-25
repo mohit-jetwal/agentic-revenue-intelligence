@@ -29,6 +29,7 @@ from app.llm.claude import ClaudeProvider
 from app.memory.base import VectorStore
 from app.memory.vector_store import ChromaVectorStore, DatabricksVectorSearchStore
 from app.observability.logging import get_logger
+from app.services.baseline_service import BaselineSalesService
 from app.services.model_registry import (
     DatabricksModelRegistry,
     MLflowModelRegistry,
@@ -113,6 +114,22 @@ class Container:
             self.settings.ml, catalog=db.catalog, schema=db.ml_schema
         )
 
+    @cached_property
+    def baseline_service(self) -> BaselineSalesService:
+        """Baseline sales estimation (Step 4).
+
+        Environment-independent: the service takes a ``DataRepository``, so it
+        gets DuckDB locally and Databricks SQL in production without knowing
+        which. That indifference is the whole point of seam 1 - the first real
+        demonstration that a model built locally moves to Stage 2 untouched.
+
+        Constructing this never loads the model. The service resolves it lazily
+        on first prediction, so a container built on a clean checkout - where no
+        model has been trained yet - still starts, and the missing artifact
+        surfaces as a readable error at the point someone asks for a baseline.
+        """
+        return BaselineSalesService(self.data_repository, settings=self.settings)
+
     # -- retrieval ----------------------------------------------------------
 
     @cached_property
@@ -182,6 +199,7 @@ class Container:
         probes: list[tuple[str, object]] = [
             ("data_repository", lambda: self.data_repository.health_check()),
             ("model_registry", lambda: self.model_registry.health_check()),
+            ("baseline_model", lambda: self.baseline_service.health_check()),
             ("vector_store", lambda: self.vector_store.health_check()),
             ("llm_provider", lambda: self.llm_provider.health_check()),
         ]

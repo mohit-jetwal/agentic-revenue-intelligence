@@ -90,6 +90,12 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
+# `X` for a feature matrix and `y` for a target is the universal scikit-learn
+# convention. Renaming them to satisfy pep8-naming would make this code read as
+# non-standard to anyone who has used sklearn, which is a worse outcome than the
+# lint. Scoped to the modules that actually follow the convention.
+"ml/**" = ["N803", "N806"]
+"tests/models/**" = ["S101", "N803", "N806"]
 
 [tool.mypy]
 python_version = "3.12"

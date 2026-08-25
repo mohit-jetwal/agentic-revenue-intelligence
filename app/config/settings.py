@@ -105,8 +105,14 @@ class DataSettings(BaseSettings):
 class MLSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ML__", **_SECTION_CONFIG)
 
-    #: "file:./mlruns" locally; "databricks" in Stage 2.
-    tracking_uri: str = "file:./mlruns"
+    #: SQLite locally; "databricks" in Stage 2.
+    #:
+    #: Not the bare ``file:./mlruns`` store that MLflow used to default to -
+    #: current versions refuse it outright and tell you to migrate. SQLite is the
+    #: supported local backend, it is what the model registry requires (the file
+    #: store never supported registration), and it matches the choice already
+    #: made for application state elsewhere in the project.
+    tracking_uri: str = "sqlite:///data/local/mlflow.db"
     registry_uri: str | None = None
     experiment_name: str = "agentic-revenue-intelligence"
     #: Agents must only ever load models at an approved stage (brief section 30).
