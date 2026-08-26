@@ -77,6 +77,16 @@ from tests.model_fixtures import (  # noqa: F401
     trained_model_dir,
 )
 
+# Step 5 fixtures: the horizon dataset and its inputs.
+from tests.forecast_fixtures import (  # noqa: F401
+    forecast_as_of,
+    forecast_config,
+    forecast_history,
+    forecast_sample,
+    forecast_view,
+    horizon_dataset,
+)
+
 _ENV_PREFIXES = (
     "APP__",
     "LLM__",

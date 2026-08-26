@@ -1,0 +1,100 @@
+# Demand forecasting configuration (brief section 36).
+#
+# Values live here rather than scattered through the code so that a training run
+# is described by one reviewable file, and so the whole configuration can be
+# hashed into MLflow params. The defaults below are chosen to keep a full run
+# under ~25 minutes: Step 4 demonstrated that multi-hour iteration is where
+# correctness bugs go undetected, so speed here is a correctness measure.
+
+target: units
+
+grain:
+  - date
+  - product_id
+  - store_id
+
+# The horizons the service exposes. `max_horizon` bounds the training draw and
+# must be >= the largest of these.
+forecast_horizons: [7, 14, 30, 90]
+max_horizon: 90
+
+sampling:
+  # Real product-store listings, sampled as *pairs*. 800 of the 6,128 real
+  # series. Note this is a genuine pair sample - see ml/forecasting/sampling.py
+  # for why the Step 4 helper could not be reused.
+  n_series: 800
+  # Volume-stratified, so the sample is not dominated by the long tail of
+  # slow-moving listings that carry little of the revenue.
+  stratify_by_volume: true
+  seed: 42
+
+origins:
+  # Every 7th day rather than every day. Adjacent origins share almost all of
+  # their history, so daily origins multiply rows sevenfold for a fraction of
+  # that much independent signal.
+  stride_days: 7
+  # Horizon steps drawn per origin, at RANDOM from U{1..max_horizon} rather than
+  # from a fixed grid. A fixed grid makes the model's splits on `h`
+  # piecewise-constant, which shows up as a staircase in the daily forecast path.
+  horizons_per_origin: 8
+  # Needs a full year of history before the 364-day lag is defined.
+  warmup_days: 400
+
+target_handling:
+  # Approach A (brief section 5): drop rows whose *target* fell on a stockout.
+  # The target is censored there - it records what was available to sell.
+  exclude_stockout_targets: true
+  # Origins on a stockout day are KEPT. A stockout at origin is a legitimate
+  # knowable state, and dropping those origins would bias the feature
+  # distribution for no gain.
+  exclude_stockout_origins: false
+  # Blank censored units before computing lags, so a stockout does not depress
+  # the next eight weeks of demand history. Uses features.engineering.demand.
+  mask_censored_lags: true
+
+models:
+  horizon_seasonal_naive: true
+  horizon_naive: true
+  lightgbm: true
+  xgboost: true
+  # Fitted at aggregate grain only - see statistical.py for why per-series
+  # SARIMA across 6,128 series is not attempted.
+  statistical: true
+
+validation:
+  method: expanding_window
+  n_folds: 3
+  test_days: 120
+  valid_days: 90
+  calibration_days: 60
+  # Gap between folds, in days. Without it a training origin near the boundary
+  # has its target inside the evaluation window - the model would literally have
+  # seen the outcomes it is being scored on.
+  embargo_days: 90
+
+intervals:
+  # 0.1 gives a 90% interval.
+  alpha: 0.1
+  # Conformal calibration is per horizon bucket, because interval width must
+  # grow with horizon. A single global quantile over-covers short horizons and
+  # under-covers long ones while reporting a blended number that looks fine.
+  horizon_buckets: [[1, 3], [4, 7], [8, 14], [15, 28], [29, 56], [57, 90]]
+  # Origins used for calibration are spaced at least this far apart. Adjacent
+  # horizon steps from one origin share an information set, so their residuals
+  # are correlated and the effective sample size is far below the row count.
+  calibration_origin_spacing_days: 7
+
+statistical:
+  # Weekly, not daily. Daily annual seasonality needs 365 seasonal states and
+  # will not converge sensibly.
+  frequency: weekly
+  levels: [total, region, category, category_region]
+  # A stratified sample at product-store grain, purely to answer "is a classical
+  # univariate model competitive where the global model actually operates?"
+  bottom_sample_series: 50
+
+explainability:
+  # Permutation importance over the top N features by gain. All 180 would be
+  # 540 predict passes for little extra insight.
+  top_n_features: 40
+  permutation_repeats: 3
