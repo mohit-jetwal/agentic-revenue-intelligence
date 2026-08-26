@@ -63,6 +63,47 @@ EXCLUDED_FROM_FEATURES: frozenset[str] = frozenset(
     }
 )
 
+#: Supply-side columns. **Never** features, under either approach.
+#:
+#: This exclusion is not about leakage in the usual sense - these are all known
+#: in advance and none is derived from today's target. It is about *what the
+#: baseline is defined to be*: demand under normal conditions, with stock
+#: available. Conditioning on inventory answers a different question - "what
+#: would sell given this stock level" - and that question is circular for every
+#: use this model has.
+#:
+#: The practical consequence was measured rather than assumed. With these
+#: columns present, ``closing_inventory_lag_1`` became the single most important
+#: feature in the LightGBM baseline, and the model recovered only 0.30 of true
+#: demand during stockouts against a theoretically-correct ~0.64 - it had
+#: learned "low stock predicts low sales" and therefore reported a supply
+#: failure as a demand collapse. Both LightGBM candidates were disqualified by
+#: the stockout check because of it.
+#:
+#: Note that excluding stockout *rows* from training does not prevent this. The
+#: model learns the relationship from the many partially-depleted rows just
+#: below the stockout threshold, then extrapolates it to zero stock.
+#:
+#: Accepted cost: a recent stockout can genuinely depress future demand, as
+#: customers switch brand or store. That is a real effect this model now cannot
+#: see. It is given up deliberately, because the effect is inseparable here from
+#: the censoring artefact and far smaller than it.
+SUPPLY_FEATURES: frozenset[str] = frozenset(
+    {
+        "inventory_available",
+        "opening_inventory",
+        "closing_inventory_lag_1",
+        "inventory_days_lag_1",
+        "inventory_days_cover",
+        "inventory_ratio",
+        "stockout_flag",
+        "stockout_yesterday",
+        "days_since_stockout",
+        "stockouts_last_28d",
+        "stockouts_last_90d",
+    }
+)
+
 #: Promotion columns. Present as features only under Approach B.
 PROMOTION_FEATURES: frozenset[str] = frozenset(
     {
@@ -206,7 +247,10 @@ def select_features(
     carry no information while inviting the misreading that promotions were
     modelled.
     """
-    columns = [c for c in panel.columns if c not in EXCLUDED_FROM_FEATURES]
+    columns = [
+        c for c in panel.columns
+        if c not in EXCLUDED_FROM_FEATURES and c not in SUPPLY_FEATURES
+    ]
     if approach is PromotionApproach.EXCLUDE:
         columns = [c for c in columns if c not in PROMOTION_FEATURES]
     return columns

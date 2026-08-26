@@ -17,6 +17,7 @@ import pytest
 from ml.baseline.training import (
     EXCLUDED_FROM_FEATURES,
     PROMOTION_FEATURES,
+    SUPPLY_FEATURES,
     TARGET,
     PromotionApproach,
     build_temporal_split,
@@ -114,6 +115,43 @@ class TestFeatureSelection:
         features = set(select_features(feature_panel, approach=PromotionApproach.CONTROL))
 
         assert features & PROMOTION_FEATURES
+
+    def test_supply_columns_are_never_features(self) -> None:
+        """A baseline must not condition on inventory, under either approach.
+
+        Regression test for a measured defect. With inventory columns present,
+        ``closing_inventory_lag_1`` became the most important feature in the
+        LightGBM baseline and the model recovered only 0.30 of true demand
+        during stockouts - it had learned that low stock predicts low sales, and
+        would therefore report a supply failure as a demand collapse.
+
+        Excluding stockout *rows* does not prevent this: the relationship is
+        learned from partially-depleted rows just below the threshold and then
+        extrapolated to zero stock. The columns themselves have to go.
+        """
+        panel = pd.DataFrame(
+            {
+                "units": [1.0],
+                "rolling_28_units": [1.0],
+                **{column: [0.0] for column in SUPPLY_FEATURES},
+            }
+        )
+
+        for approach in PromotionApproach:
+            features = set(select_features(panel, approach=approach))
+
+            assert not (features & SUPPLY_FEATURES), (
+                f"supply columns leaked into the {approach.value} feature set: "
+                f"{features & SUPPLY_FEATURES}"
+            )
+
+    def test_supply_exclusion_survives_the_real_panel(
+        self, feature_panel: pd.DataFrame
+    ) -> None:
+        """The exclusion must hold against actual panel columns, not just a stub."""
+        features = set(select_features(feature_panel, approach=PromotionApproach.CONTROL))
+
+        assert not (features & SUPPLY_FEATURES)
 
     def test_ground_truth_columns_never_become_features(
         self, synthetic_panel: pd.DataFrame

@@ -77,7 +77,7 @@ trained on them learns that a supply failure predicts low demand - exactly
 backwards, and the inversion that would make Step 17 recommend a price cut to
 fix a warehouse problem.
 
-Two mechanisms, addressing different halves of the problem:
+Three mechanisms, addressing different halves of the problem:
 
 - **Stockout rows are excluded from training.** The target is corrupted on those
   rows; it records what was available to sell.
@@ -85,6 +85,44 @@ Two mechanisms, addressing different halves of the problem:
   `features.engineering.demand.mask_censored` exists for this. Without it, a
   stockout depresses the next four weeks of lag features and the model learns
   the supply failure indirectly, through the back door.
+- **No supply-side column is a feature** (`SUPPLY_FEATURES`). See below - this
+  one was not in the original design and was added after the ground truth caught
+  it.
+
+#### Why excluding stockout rows is not enough
+
+The first training run on the full panel disqualified **both** LightGBM
+candidates. The feature importances showed why: `closing_inventory_lag_1` was
+the single most important feature in the model, with `opening_inventory` and
+`inventory_available` also in the top five.
+
+With inventory available as a predictor, the model learns *"low stock predicts
+low sales"* - which is true, and is exactly the censoring relationship the step
+exists to avoid. Excluding stockout rows does not prevent it: the relationship
+is learned from the many partially-depleted rows just below the stockout
+threshold and then extrapolated to zero stock.
+
+The measured effect, from the same panel before and after the fix:
+
+| | stockout lift (÷ observed) | ÷ latent (correct ≈ 0.64) | outcome |
+|---|---|---|---|
+| LightGBM, inventory features present | 1.12 | 0.30 | **disqualified** |
+| LightGBM, supply features excluded | 2.48 | **0.68** | selected |
+
+Accuracy barely moved - 40.4% to 40.2% WMAPE. That is the important part: the
+inventory columns were contributing censoring signal rather than demand signal,
+so removing them cost essentially nothing and fixed the diagnostic outright.
+
+There is also a conceptual argument that should have caught this without the
+experiment. The baseline is *defined* as demand with stock available.
+Conditioning it on inventory answers a different question - "what would sell
+given this stock level" - and that question is circular for every use the model
+has.
+
+**Accepted cost:** a recent stockout can genuinely depress future demand, as
+customers switch brand or store. The model can no longer see that effect. It is
+given up deliberately, because here it is inseparable from the censoring
+artefact and far smaller than it.
 
 ## Target and objective
 

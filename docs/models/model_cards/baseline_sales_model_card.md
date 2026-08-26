@@ -69,6 +69,17 @@ innocent-looking leak in the column list and the most damaging.
 Free-text and high-cardinality labels (`product_name`, `city`, …) are dropped as
 well: no signal a tree can use, and they bloat any encoder fitted downstream.
 
+**All supply-side columns are excluded** (`SUPPLY_FEATURES`: inventory levels,
+days of cover, stockout history). Not for leakage reasons — none is derived from
+today's target — but because the baseline is *defined* as demand with stock
+available, so conditioning on inventory is circular.
+
+This was found empirically, not by design. With those columns present,
+`closing_inventory_lag_1` became the model's most important feature and LightGBM
+recovered only 0.30 of true demand during stockouts against a correct ~0.64 — it
+had learned that low stock predicts low sales. Removing them moved the
+diagnostic to 0.68 while accuracy changed by 0.2 percentage points.
+
 **No personal or customer-level data is used.** The panel is aggregate
 product/store/day throughout.
 
@@ -138,7 +149,7 @@ run:
 
 | Check | Result |
 |---|---|
-| Baseline vs censored sales during stockouts | **1.38–2.32×** — sees through the censoring |
+| Baseline vs censored sales during stockouts | **2.3–2.8×** — sees through the censoring |
 | Prediction-interval coverage (90% nominal) | **~91%** measured on test data — calibrated |
 | Bias on clean rows | Small and reported signed |
 | Promotional gap direction | Positive, scaling with discount depth |
