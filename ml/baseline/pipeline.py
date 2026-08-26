@@ -19,7 +19,7 @@ from typing import Any
 
 import pandas as pd
 
-from app.config.settings import get_settings
+from app.config.settings import Settings, get_settings
 from app.observability.logging import get_logger
 from data.repositories.base import DataRepository
 from data.repositories.sampling import sample_product_store_pairs
@@ -253,6 +253,25 @@ def load_latent_demand(repository: DataRepository) -> pd.DataFrame:
     return frame
 
 
+def default_output_dir(
+    *, sample_pairs: int | None, settings: Settings | None = None
+) -> Path:
+    """Where a run's artifacts go when the caller does not say.
+
+    A **sampled** run gets its own directory. This is a guard rather than
+    tidiness: a sampled run produces a model trained on a fraction of the
+    catalogue, and writing it to the path the service loads from would silently
+    replace the deployed model with a weaker one that looks identical from the
+    outside - same filenames, same schema, plausible metrics.
+
+    Learned by doing it. A 400-pair verification run overwrote a model trained on
+    the full 5-million-row panel, and the only visible trace was a smaller
+    calibration count buried in the metadata sidecar.
+    """
+    root = (settings or get_settings()).project_root / "data" / "local" / "models"
+    return root / ("baseline_sampled" if sample_pairs else "baseline")
+
+
 def train_baseline_pipeline(
     repository: DataRepository,
     *,
@@ -358,7 +377,9 @@ def train_baseline_pipeline(
 
     # --- persist and track -------------------------------------------------
     settings = get_settings()
-    directory = output_dir or (settings.project_root / "data" / "local" / "models" / "baseline")
+    directory = output_dir or default_output_dir(
+        sample_pairs=sample_pairs, settings=settings
+    )
 
     model = FittedBaselineModel(
         repository,

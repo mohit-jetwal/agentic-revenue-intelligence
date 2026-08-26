@@ -46,7 +46,10 @@ def main() -> int:
         "--sample-pairs",
         type=int,
         default=None,
-        help="Sample this many product-store listings instead of the full panel.",
+        help=(
+            "Sample this many product-store listings instead of the full panel. "
+            "Writes to models/baseline_sampled so it cannot overwrite the real model."
+        ),
     )
     parser.add_argument(
         "--alpha",

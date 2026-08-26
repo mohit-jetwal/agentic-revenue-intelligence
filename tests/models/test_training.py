@@ -14,6 +14,7 @@ from datetime import timedelta
 import pandas as pd
 import pytest
 
+from ml.baseline.pipeline import default_output_dir
 from ml.baseline.training import (
     EXCLUDED_FROM_FEATURES,
     PROMOTION_FEATURES,
@@ -84,6 +85,27 @@ class TestTemporalSplit:
 
         with pytest.raises(ValueError, match="days of history"):
             build_temporal_split(short)
+
+
+class TestOutputLocation:
+    """Where a run writes, which is a correctness question rather than tidying."""
+
+    def test_a_full_run_writes_to_the_model_directory(self) -> None:
+        assert default_output_dir(sample_pairs=None).name == "baseline"
+
+    def test_a_sampled_run_writes_somewhere_else(self) -> None:
+        """A sampled model must never land where the service loads from.
+
+        Regression test for a real incident: a 400-pair verification run
+        overwrote a model trained on the full five-million-row panel. Nothing
+        looked wrong afterwards - same filenames, same schema, plausible metrics
+        - and the only trace was a smaller calibration count in the sidecar.
+        """
+        sampled = default_output_dir(sample_pairs=400)
+        full = default_output_dir(sample_pairs=None)
+
+        assert sampled != full
+        assert "sampled" in sampled.name
 
 
 class TestFeatureSelection:
