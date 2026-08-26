@@ -135,9 +135,11 @@ because demand is drawn from an over-dispersed negative binomial.
 
 | | |
 |---|---|
-| Selected model, clean rows vs true demand | ~40% WMAPE |
+| Selected model (`lightgbm__exclude`), clean rows vs true demand | **40.4%** WMAPE |
 | Noise floor | 35.0% WMAPE |
-| **Ratio** | **~1.13×** |
+| **Ratio** | **1.15×** |
+| Backtest, 4 expanding folds | 39.0% ±0.7% — stable |
+| Bias on clean rows | **+6.7%** — see limitations |
 
 Read the ratio, not the absolute number. A score of 20% would be impossible on
 honest features and should be treated as evidence of leakage.
@@ -149,10 +151,11 @@ run:
 
 | Check | Result |
 |---|---|
-| Baseline vs censored sales during stockouts | **2.3–2.8×** — sees through the censoring |
-| Prediction-interval coverage (90% nominal) | **~91%** measured on test data — calibrated |
-| Bias on clean rows | Small and reported signed |
-| Promotional gap direction | Positive, scaling with discount depth |
+| Baseline vs censored sales during stockouts | **2.48×** — sees through the censoring |
+| Recovery of true stockout demand (correct ≈0.64) | **0.68** |
+| Prediction-interval coverage (90% nominal) | **92.0%** on 587,603 test rows — calibrated |
+| Bias on clean rows | **+6.7%**, reported signed |
+| Promotional gap direction | Positive, as intended |
 
 **On the stockout ratio:** the criterion is predicted ÷ *observed*, not ÷ latent.
 Stockouts here are endogenous — they occur *because* demand spiked, and latent
@@ -167,6 +170,7 @@ mistake is easy to repeat.
 
 | Limitation | Consequence |
 |---|---|
+| **Baseline over-predicts by 6.7%** | Uplift measured against it is *understated* by roughly that much. Ridge is nearly unbiased (−0.5%) but 3.3 points less accurate; the selection rule ranks on accuracy, so LightGBM ships. Whether to add a bias term to the criterion is an open decision for Step 5. |
 | Promotional baseline cannot be point-validated | `_promo_responsiveness` is latent and unpublished; promotional validation is directional only |
 | Conformal assumes exchangeability | A trend violates it mildly; coverage is *measured*, so a shortfall surfaces |
 | No cannibalisation or halo modelling | A promotion on one SKU distorts its substitutes' baseline-relative performance |

@@ -251,6 +251,54 @@ deliberately unpublished. Promotional validation is therefore **directional**
 (sign, and monotonicity in discount depth) rather than point-accurate. Stated
 rather than glossed.
 
+## Results (dev profile, seed 42, 5.06 M panel rows)
+
+Six candidates, ranked on WMAPE against true demand on clean test rows:
+
+| Model | Approach | Latent WMAPE | Bias | Stockout lift | ÷ latent | Backtest | Coverage |
+|---|---|---|---|---|---|---|---|
+| **lightgbm** | **exclude** | **40.4%** | +6.7% | 2.48 | 0.68 | 39.0% ±0.7% | 92.0% |
+| lightgbm | control | 40.6% | +7.0% | 2.72 | 0.74 | 39.3% ±1.4% | 92.0% |
+| ridge | exclude | 43.7% | **−0.5%** | 2.86 | 0.78 | 43.1% ±1.1% | 87.9% |
+| ridge | control | 45.0% | −3.0% | 2.88 | 0.78 | 44.3% ±0.9% | 88.7% |
+| seasonal_naive | either | 54.3% | +17.4% | 2.32 | 0.63 | 52.7% ±1.3% | 88.6% |
+
+**Selected: `lightgbm__exclude`.**
+
+- **40.4% against a 35.0% noise floor = 1.15×.** Most of the remaining error is
+  irreducible negative-binomial noise, not unexploited signal.
+- **Every candidate now passes the stockout check** (2.32–2.88 versus observed
+  sales). The `÷ latent` column is the sanity check: the theoretically correct
+  value is ~0.64, and the seasonal naive lands at 0.63 almost exactly.
+- **Backtest is stable** across four expanding quarterly folds at ±0.7%.
+- **Approach C ("exclude") wins, but by 0.2 points** — 40.4% versus 40.6%. That
+  is far too narrow to call a general result. It says the two biases roughly
+  cancel on *this* dataset, not that Approach C is better.
+- Top features are all demand-side: rolling 56/28/14-day means, festival flag,
+  price versus rolling average, day of week.
+
+### An unresolved tension worth naming
+
+This document argues that **bias matters more than error** for a baseline, and
+that is genuine — random error averages out over a campaign, while a consistent
+skew does not. But the selection rule ranks on **WMAPE**, and on this data the
+two disagree:
+
+| | Latent WMAPE | Bias |
+|---|---|---|
+| lightgbm exclude | 40.4% (better) | **+6.7%** |
+| ridge exclude | 43.7% | **−0.5%** (better) |
+
+LightGBM is 3.3 points more accurate; Ridge is essentially unbiased. Since the
+baseline over-predicts by 6.7%, uplift measured against it will be
+*understated* by roughly that much — the safer direction of the two (it hides
+real uplift rather than inventing it), but not nothing.
+
+The rule as specified ranks on accuracy, so LightGBM is selected and that is
+what ships. Flagged here rather than quietly resolved, because adding a bias
+term to the selection criterion is a real decision with a real trade-off, and it
+belongs to whoever owns the uplift numbers in Step 5.
+
 ## Prediction intervals
 
 Split conformal, calibrated on a dedicated fold. Distribution-free, with a
