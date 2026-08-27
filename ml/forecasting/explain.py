@@ -33,8 +33,22 @@ from ml.forecasting.train import TrainedForecaster, _prepare
 logger = get_logger(__name__)
 
 #: Feature-name prefixes grouped into families for the summary table.
+#:
+#: **Recent history and the seasonal anchor are separate families, deliberately.**
+#: Lumping them together as "demand history" hides the single most informative
+#: contrast the model can show. They have opposite horizon profiles: yesterday's
+#: sales decay toward irrelevance as the horizon grows, while units from 364 days
+#: before the *target* are exactly as knowable at h=90 as at h=1 and become
+#: relatively *more* important as the recent signal fades.
+#:
+#: Grouped together, the combined share rises with horizon - which reads as a
+#: leakage alarm under the rule in :func:`recent_history_decay` and is in fact
+#: the seasonal anchor doing its job.
 _FAMILIES: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("demand history", ("lag_", "rolling_", "demand_", "seasonal_reference")),
+    ("seasonal anchor", ("seasonal_reference", "lag_364")),
+    ("recent history", ("lag_1_", "lag_7_", "lag_14_", "rolling_7_", "rolling_14_",
+                        "demand_momentum")),
+    ("medium history", ("lag_", "rolling_", "demand_")),
     ("calendar", ("h_day", "h_week", "h_month", "h_quarter", "h_dow", "h_doy",
                   "h_weekend", "h_holiday", "h_festival", "h_season", "h_financial",
                   "h_days_to_festival", "h_days_since_festival")),
@@ -102,13 +116,23 @@ def permutation_importance_by_horizon(
 
         for feature in candidates:
             degradations = []
+            original_dtype = prepared[feature].dtype
             for _ in range(repeats):
                 shuffled = prepared.copy()
-                shuffled[feature] = (
+                # Re-cast after shuffling. `.to_numpy()` on a categorical column
+                # returns an object array, so assigning it back silently demotes
+                # the dtype - and XGBoost then refuses the frame outright
+                # ("DataFrame.dtypes for data must be int, float, bool or
+                # category"). LightGBM accepts it and treats the column
+                # differently instead, which is the quieter failure.
+                values = (
                     shuffled[feature]
                     .sample(frac=1.0, random_state=int(rng.integers(0, 2**31)))
                     .to_numpy()
                 )
+                shuffled[feature] = pd.Series(
+                    values, index=shuffled.index
+                ).astype(original_dtype)
                 permuted = compute_metrics(
                     block[TARGET], pd.Series(trained.estimator.predict(shuffled))
                 ).wmape
@@ -152,25 +176,46 @@ def importance_by_family(table: pd.DataFrame) -> pd.DataFrame:
     return summary.pivot(index="family", columns="bucket", values="importance").fillna(0.0)
 
 
-def demand_history_decay(table: pd.DataFrame) -> pd.DataFrame:
-    """How much the model leans on recent demand as the horizon grows.
+def recent_history_decay(table: pd.DataFrame) -> pd.DataFrame:
+    """How much the model leans on *recent* demand as the horizon grows.
 
     Expected to fall: yesterday's sales say a lot about tomorrow and little about
-    three months out. A flat or rising profile is a leakage signal worth
-    investigating, because it would mean recent history is somehow still
-    informative at long range - which for a genuine forecast it should not be.
+    three months out. A flat or rising profile is worth investigating, because it
+    would mean recent history is somehow still informative at long range - which
+    for a genuine forecast it should not be.
+
+    **Only the recent family counts here.** An earlier version of this function
+    included the 364-day seasonal anchor, and the combined share duly rose with
+    horizon - which looked exactly like the leakage signal above and was nothing
+    of the sort. The anchor is equally knowable at every horizon, so as the
+    recent signal decays the anchor's *share* necessarily grows. Two features
+    with opposite horizon profiles must not be averaged into one diagnostic.
     """
     if table.empty:
         return table
 
     totals = table.groupby("bucket", observed=True)["importance"].sum()
-    history = (
-        table[table["family"] == "demand history"]
+    recent = (
+        table[table["family"] == "recent history"]
         .groupby("bucket", observed=True)["importance"]
         .sum()
+        .reindex(totals.index)
+        .fillna(0.0)
     )
-    share = (history / totals.replace(0, np.nan)).rename("demand_history_share")
-    return share.reset_index()
+    seasonal = (
+        table[table["family"] == "seasonal anchor"]
+        .groupby("bucket", observed=True)["importance"]
+        .sum()
+        .reindex(totals.index)
+        .fillna(0.0)
+    )
+
+    return pd.DataFrame(
+        {
+            "recent_history_share": recent / totals.replace(0, np.nan),
+            "seasonal_anchor_share": seasonal / totals.replace(0, np.nan),
+        }
+    ).reset_index()
 
 
 def top_drivers(table: pd.DataFrame, *, bucket: str | None = None, n: int = 10) -> pd.DataFrame:

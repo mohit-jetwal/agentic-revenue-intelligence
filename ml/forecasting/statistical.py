@@ -1,15 +1,21 @@
 """Classical time-series models, fitted where their assumptions actually hold.
 
 Section 8 asks for a statistical approach and warns against forcing SARIMA onto
-millions of series. This dataset has **6,128 product-store series**, and the
-warning is arithmetic rather than taste: a daily SARIMA with weekly and annual
-seasonality takes seconds to minutes per series, so one pass is hours - *per
-backtest fold*. The per-fit cost is measured here and reported, so "infeasible"
-is a number rather than an assertion.
+millions of series. The cost is measured here rather than asserted - and the
+measurement is more modest than the warning implies, so it is worth stating
+accurately.
 
-But the scalability argument is not the interesting one. **The statistical models
-are fitted at aggregate grain because that is where they are correct**, not as a
-consolation prize:
+**Measured on this dataset:** weekly ETS fits in ~0.25s per series. Across 6,128
+product-store series that is roughly 25 minutes for one pass, or a bit over an
+hour across three backtest folds. Expensive next to the global model's ~8 minutes
+for the entire pipeline, but *not* infeasible. Claiming otherwise would be
+overstating a real cost into a fictional impossibility. Daily SARIMA with two
+seasonal periods would be far worse, but that is a different model and the number
+here is for the one actually fitted.
+
+**So scalability is not the argument. Appropriateness is.** The statistical models
+are fitted at aggregate grain because that is where they are *correct*, not
+because the alternative was impossible:
 
 * At product-store grain the series are sparse counts against a ~35% irreducible
   noise floor. ETS would be fitting noise, and its intervals would be
@@ -318,10 +324,16 @@ def scalability_statement(result: StatisticalResult) -> str:
     if not result.fits or not result.bottom_series_count:
         return "Per-series cost was not measured."
 
+    hours = result.extrapolated_hours()
+    verdict = (
+        "expensive but feasible" if hours < 4 else "prohibitive at this scale"
+    )
     return (
         f"ETS fits averaged {result.mean_fit_seconds:.2f}s per series. Across the "
         f"{result.bottom_series_count:,} product-store series in this dataset, one "
-        f"pass would cost roughly {result.extrapolated_hours():.1f} hours - and a "
-        f"walk-forward backtest multiplies that by the number of folds. That is "
-        f"the scalability argument, measured rather than asserted."
+        f"pass would cost roughly {hours:.1f} hours ({hours * 60:.0f} minutes), and "
+        f"a walk-forward backtest multiplies that by the number of folds - "
+        f"{verdict}. Reported as measured rather than rounded up into a claim of "
+        f"impossibility: the case for fitting at aggregate grain rests on where "
+        f"ETS is statistically appropriate, not on where it is affordable."
     )
