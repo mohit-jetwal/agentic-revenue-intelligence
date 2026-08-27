@@ -105,12 +105,19 @@ def build_category_dtypes(
         if column not in frame.columns:
             continue
         series = frame[column]
-        if isinstance(series.dtype, pd.CategoricalDtype):
-            dtypes[column] = series.dtype
-        elif series.dtype == object:
-            dtypes[column] = pd.CategoricalDtype(
-                categories=sorted(series.dropna().astype(str).unique())
-            )
+        if not isinstance(series.dtype, pd.CategoricalDtype) and series.dtype != object:
+            # Numeric and boolean columns are left alone; trees handle them
+            # directly and categorising a bool gains nothing.
+            continue
+        # Levels are always normalised to sorted strings, even when the column
+        # already carries a CategoricalDtype. Preserving the source dtype looks
+        # harmless and is not: a category index of Python booleans is rejected
+        # outright by XGBoost ("Category index must contain only values of the
+        # same type"), and mixed-type levels sort unpredictably, which silently
+        # changes the integer codes between frames.
+        dtypes[column] = pd.CategoricalDtype(
+            categories=sorted(series.dropna().astype(str).unique())
+        )
     return dtypes
 
 
@@ -119,16 +126,33 @@ def _prepare(
     feature_names: list[str],
     categories: dict[str, pd.CategoricalDtype] | None = None,
 ) -> pd.DataFrame:
-    """Project to the feature set with consistent categorical encodings."""
-    working = frame[feature_names].copy()
-    for column in working.columns:
-        if categories is not None and column in categories:
-            values = working[column]
-            if isinstance(values.dtype, pd.CategoricalDtype):
-                values = values.astype(object)
-            working[column] = values.astype(categories[column])
+    """Project to the feature set and coerce every column to its training dtype.
+
+    Coercing *all* columns, not just the categorical ones, is deliberate. The
+    serving scaffold is built from different tables than the training panel, so a
+    column that is float there can arrive as object here - most easily when every
+    value in a short forecast window happens to be missing. XGBoost rejects that
+    outright ("the data type doesn't match the one used in the training
+    dataset"); LightGBM accepts it and quietly treats the column differently.
+
+    Pinning the schema turns a whole class of train/serve skew into an
+    impossibility rather than something to be discovered later.
+    """
+    working = frame.reindex(columns=feature_names).copy()
+
+    for column in feature_names:
+        target_dtype = (categories or {}).get(column)
+        if target_dtype is not None:
+            # Via string, to match how the levels were built. Casting a
+            # categorical straight to another CategoricalDtype maps by value,
+            # and a bool True would not match the string "True".
+            values = working[column].astype(object)
+            values = values.where(values.isna(), values.astype(str))
+            working[column] = values.astype(target_dtype)
         elif working[column].dtype == object:
-            working[column] = working[column].astype("category")
+            # Not a known categorical, so it must be numeric in training.
+            working[column] = pd.to_numeric(working[column], errors="coerce")
+
     return working
 
 

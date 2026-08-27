@@ -68,6 +68,19 @@ from tests.feature_fixtures import (  # noqa: F401
     smoke_view,
 )
 
+# Step 5 fixtures: the horizon dataset and its inputs.
+from tests.forecast_fixtures import (  # noqa: F401
+    benchmark_dataset,
+    forecast_as_of,
+    forecast_config,
+    forecast_history,
+    forecast_sample,
+    forecast_split,
+    forecast_view,
+    horizon_dataset,
+    trained_smoke_forecaster,
+)
+
 # Step 4 fixtures: the known-truth synthetic panel the model tests assert
 # against. Same re-export pattern.
 from tests.model_fixtures import (  # noqa: F401
@@ -75,16 +88,6 @@ from tests.model_fixtures import (  # noqa: F401
     latent_frame,
     synthetic_panel,
     trained_model_dir,
-)
-
-# Step 5 fixtures: the horizon dataset and its inputs.
-from tests.forecast_fixtures import (  # noqa: F401
-    forecast_as_of,
-    forecast_config,
-    forecast_history,
-    forecast_sample,
-    forecast_view,
-    horizon_dataset,
 )
 
 _ENV_PREFIXES = (

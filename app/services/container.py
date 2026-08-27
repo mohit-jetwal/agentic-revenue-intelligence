@@ -30,6 +30,7 @@ from app.memory.base import VectorStore
 from app.memory.vector_store import ChromaVectorStore, DatabricksVectorSearchStore
 from app.observability.logging import get_logger
 from app.services.baseline_service import BaselineSalesService
+from app.services.forecast_service import ForecastingService
 from app.services.model_registry import (
     DatabricksModelRegistry,
     MLflowModelRegistry,
@@ -130,6 +131,15 @@ class Container:
         """
         return BaselineSalesService(self.data_repository, settings=self.settings)
 
+    @cached_property
+    def forecasting_service(self) -> ForecastingService:
+        """Demand forecasting (Step 5).
+
+        Environment-independent for the same reason the baseline service is: it
+        takes a ``DataRepository`` and never asks which implementation it got.
+        """
+        return ForecastingService(self.data_repository, settings=self.settings)
+
     # -- retrieval ----------------------------------------------------------
 
     @cached_property
@@ -171,10 +181,14 @@ class Container:
     def tool_registry(self) -> ToolRegistry:
         """The analytical capabilities available to agents.
 
-        Empty until Stage 1 Step 13; tools are registered once the models from
-        Steps 4-11 exist to back them.
+        Populated as the models behind each tool are built. Step 5 adds
+        ``forecast_demand``; the rest arrive with their models.
+
+        The service is passed in rather than constructed inside the registry, so
+        building the registry never loads a model - a missing artifact must not
+        make container startup fail.
         """
-        return build_default_registry()
+        return build_default_registry(forecasting_service=self.forecasting_service)
 
     # -- per-request objects ------------------------------------------------
 
@@ -200,8 +214,15 @@ class Container:
             ("data_repository", lambda: self.data_repository.health_check()),
             ("model_registry", lambda: self.model_registry.health_check()),
             ("baseline_model", lambda: self.baseline_service.health_check()),
+            ("forecast_model", lambda: self.forecasting_service.health_check()),
             ("vector_store", lambda: self.vector_store.health_check()),
             ("llm_provider", lambda: self.llm_provider.health_check()),
+            # Inside the guarded loop, not appended after it. Once the registry
+            # started injecting services into tools, building it could raise on a
+            # misconfigured repository - and an unguarded probe would take the
+            # whole health endpoint down, which is precisely what this method
+            # exists to prevent.
+            ("tool_registry", lambda: (True, f"{len(self.tool_registry)} tools registered")),
         ]
         for name, probe in probes:
             try:
@@ -209,7 +230,6 @@ class Container:
             except Exception as exc:  # noqa: BLE001 - health checks must not raise
                 ok, detail = False, f"{type(exc).__name__}: {exc}"
             results.append((name, ok, detail))
-        results.append(("tool_registry", True, f"{len(self.tool_registry)} tools registered"))
         return results
 
 

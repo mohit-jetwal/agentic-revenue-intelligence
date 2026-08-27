@@ -189,9 +189,58 @@ def test_baseline_model_is_reported_in_health_checks(container: Container) -> No
     assert "baseline_model" in names
 
 
-def test_tool_registry_is_empty_until_step_13(container: Container) -> None:
-    assert len(container.tool_registry) == 0
-    assert container.tool_registry.names() == []
+def test_forecasting_service_is_reachable_through_the_container(
+    container: Container,
+) -> None:
+    """Step 5's service must be wired, not merely written."""
+    assert container.forecasting_service is not None
+    assert container.forecasting_service is container.forecasting_service
+
+
+def test_forecast_model_is_reported_in_health_checks(container: Container) -> None:
+    names = {name for name, _, _ in container.health_checks()}
+
+    assert "forecast_model" in names
+
+
+def test_tool_registry_carries_the_forecasting_tool(container: Container) -> None:
+    """Step 1 left the registry empty and deferred tools to Step 13.
+
+    Step 5 changes that for one tool: its brief asks for a working
+    ``ForecastingTool`` contract rather than a placeholder, so the tool is
+    registered as soon as the model behind it exists. The remaining tools still
+    arrive with their own steps.
+    """
+    assert container.tool_registry.has("forecast_demand")
+
+    spec = container.tool_registry.get("forecast_demand").spec()
+    assert spec.permission == "run_model"
+    assert "forecast" in spec.description.lower()
+
+
+def test_registering_a_tool_does_not_load_its_model(container: Container) -> None:
+    """Building the registry must not touch the filesystem for a model.
+
+    The registry is constructed during container startup, where a missing model
+    artifact should surface as an unhealthy check rather than a boot failure.
+    """
+    registry = container.tool_registry
+
+    assert len(registry) >= 1
+    # Reaching `is_available` answers without raising whether or not a model
+    # has ever been trained.
+    assert isinstance(container.forecasting_service.is_available, bool)
+
+
+def test_tool_registry_is_stable(container: Container) -> None:
+    """Cached, so repeated access returns the same registry.
+
+    Matters because tools hold injected services: rebuilding the registry per
+    access would create a fresh service - and a fresh model load - on every
+    agent turn.
+    """
+    assert container.tool_registry is container.tool_registry
+    assert container.tool_registry.names() == sorted(container.tool_registry.names())
 
 
 def test_process_container_singleton_can_be_replaced(container: Container) -> None:

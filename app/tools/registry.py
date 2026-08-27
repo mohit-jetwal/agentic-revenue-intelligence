@@ -73,10 +73,26 @@ class ToolRegistry:
         return len(self._tools)
 
 
-def build_default_registry() -> ToolRegistry:
+def build_default_registry(
+    *, forecasting_service: object | None = None
+) -> ToolRegistry:
     """Construct the registry with the platform's analytical tools.
 
-    Empty in Step 1. Tools are registered here as they are implemented in
-    Stage 1 Step 13, once the models from Steps 4-11 exist to back them.
+    Empty in Step 1; tools arrive as the models behind them are built. Step 5
+    registers the first one - the brief for that step asks for a working
+    ``ForecastingTool`` contract, not a placeholder, so it is wired here rather
+    than deferred to Step 13 along with the rest.
+
+    Services are injected rather than constructed. A tool that builds its own
+    service would load a model at registry-construction time, and the registry is
+    built during container startup - where a missing model artifact should not be
+    fatal.
     """
-    return ToolRegistry()
+    registry = ToolRegistry()
+
+    if forecasting_service is not None:
+        from app.tools.forecasting_tool import ForecastingTool
+
+        registry.register(ForecastingTool(forecasting_service))  # type: ignore[arg-type]
+
+    return registry

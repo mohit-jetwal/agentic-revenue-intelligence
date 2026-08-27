@@ -21,9 +21,12 @@ import pytest
 
 from data.repositories.local import LocalDataRepository
 from data.repositories.point_in_time import PointInTimeView
+from ml.forecasting.baselines import attach_seasonal_reference
 from ml.forecasting.config import ForecastConfig, load_forecast_config
 from ml.forecasting.dataset import HorizonDataset, build_history, build_horizon_dataset
 from ml.forecasting.sampling import SeriesSample, sample_series
+from ml.forecasting.split import OriginSplit, build_origin_split
+from ml.forecasting.train import TrainedForecaster, build_estimator, train_forecaster
 
 
 @pytest.fixture(scope="session")
@@ -81,4 +84,49 @@ def horizon_dataset(
     """The (origin, horizon, target) training rows. Read-only."""
     return build_horizon_dataset(
         forecast_history, forecast_view, forecast_config, forecast_sample
+    )
+
+
+@pytest.fixture(scope="session")
+def benchmark_dataset(
+    horizon_dataset: HorizonDataset, forecast_history: pd.DataFrame
+) -> HorizonDataset:
+    """The dataset with the seasonal benchmark's reference column attached.
+
+    The generic feature panel cannot carry it: it is units at
+    ``target_date - 364``, which is a target-side lookup and so has no place in
+    a panel indexed by a single date.
+    """
+    return HorizonDataset(
+        frame=attach_seasonal_reference(horizon_dataset.frame, forecast_history),
+        feature_names=[*horizon_dataset.feature_names, "seasonal_reference"],
+        excluded=horizon_dataset.excluded,
+    )
+
+
+@pytest.fixture(scope="session")
+def forecast_split(
+    benchmark_dataset: HorizonDataset, forecast_config: ForecastConfig
+) -> OriginSplit:
+    return build_origin_split(benchmark_dataset.frame, forecast_config)
+
+
+@pytest.fixture(scope="session")
+def trained_smoke_forecaster(
+    benchmark_dataset: HorizonDataset,
+    forecast_config: ForecastConfig,
+    forecast_split: OriginSplit,
+) -> TrainedForecaster:
+    """A fitted LightGBM, trained once and shared.
+
+    LightGBM rather than the naive benchmarks because the behavioural leakage
+    tests need a model capable of *exploiting* a leak. A naive estimator ignores
+    almost every feature, so it would pass those tests whether or not the dataset
+    leaked - which would make them decorative.
+    """
+    return train_forecaster(
+        benchmark_dataset,
+        build_estimator("lightgbm", seed=forecast_config.sampling.seed),
+        forecast_config,
+        forecast_split,
     )

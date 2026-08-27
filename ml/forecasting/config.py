@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 from functools import lru_cache
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -157,7 +158,7 @@ class ForecastConfig(_Base):
                 f"horizon buckets stop at {covered[-1][1]} but max_horizon is "
                 f"{self.max_horizon}; the longest horizons would be uncalibrated"
             )
-        for (_, previous_high), (low, _) in zip(covered, covered[1:], strict=False):
+        for (_, previous_high), (low, _) in pairwise(covered):
             if low != previous_high + 1:
                 raise ForecastConfigError(
                     f"horizon buckets are not contiguous around {previous_high}/{low}"
@@ -187,7 +188,14 @@ class ForecastConfig(_Base):
             update={
                 "sampling": self.sampling.model_copy(update={"n_series": 50}),
                 "origins": self.origins.model_copy(
-                    update={"stride_days": 14, "horizons_per_origin": 4}
+                    # A wide stride keeps the expensive part cheap - building the
+                    # feature history dominates the runtime - while drawing many
+                    # horizons per origin keeps the *rows* plentiful, which is
+                    # what the per-bucket assertions need. Four horizons per
+                    # origin left ~60 rows in the shortest bucket, few enough
+                    # that the horizon-monotonicity check flipped between runs
+                    # on noise alone.
+                    update={"stride_days": 14, "horizons_per_origin": 12}
                 ),
                 "validation": self.validation.model_copy(update={"n_folds": 2}),
             }

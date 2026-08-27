@@ -55,7 +55,7 @@ from features.engineering.demand import (
     mask_censored,
 )
 from features.engineering.entity import drop_high_cardinality
-from features.engineering.promotion import add_promotion_features, expand_promotion_calendar
+from features.engineering.promotion import add_promotion_features
 from features.engineering.temporal import (
     add_festival_proximity,
     add_time_features,
@@ -122,6 +122,11 @@ _CALENDAR_COLUMNS = (
 
 #: Planned-price columns from the ``pricing`` table (KNOWN_IN_ADVANCE).
 _PLANNED_PRICE_COLUMNS = ("regular_price", "selling_price", "discount_percentage")
+
+#: How far either side of the requested window to read the calendar, so festival
+#: proximity is measured against the real festival set rather than whichever
+#: ones happen to fall inside a short forecast horizon.
+_FESTIVAL_LOOKAROUND_DAYS = 400
 
 
 @dataclass(frozen=True)
@@ -316,7 +321,18 @@ def target_side_features(
     start = dates.min().date()
     end = dates.max().date()
 
-    calendar = view.get_calendar(start_date=start, end_date=end)
+    # Fetch a *wide* calendar window, not just the dates being forecast.
+    #
+    # `add_festival_proximity` measures the distance to the nearest festival in
+    # whatever calendar it is handed. Over a full history that is plentiful; over
+    # a 7-day forecast window there may be no festival at all, and the columns
+    # come out absent or meaningless. That asymmetry between the training path
+    # and the serving path is exactly the kind of skew this module exists to
+    # prevent, so both paths look at the same wide window.
+    calendar = view.get_calendar(
+        start_date=start - timedelta(days=_FESTIVAL_LOOKAROUND_DAYS),
+        end_date=end + timedelta(days=_FESTIVAL_LOOKAROUND_DAYS),
+    )
     grid = add_time_features(grid, cyclical=True)
     grid = join_calendar_features(grid, calendar, columns=_CALENDAR_COLUMNS)
     grid = add_festival_proximity(grid, calendar)
@@ -518,6 +534,15 @@ def build_future_scaffold(
     working = history.copy()
     working["date"] = pd.to_datetime(working["date"])
     as_of_ts = pd.Timestamp(as_of)
+
+    # Restrict to exactly the requested series. Without this the scaffold covers
+    # every series in the loaded history, so a request for one product-store
+    # comes back with the whole panel - and the caller has no way to tell that
+    # the filter was ignored rather than unusually broad.
+    requested = pd.MultiIndex.from_frame(pairs[list(KEYS)].drop_duplicates())
+    working = working[pd.MultiIndex.from_frame(working[list(KEYS)]).isin(requested)]
+    if working.empty:
+        return pd.DataFrame()
 
     at_origin = working[working["date"] <= as_of_ts]
     if at_origin.empty:
