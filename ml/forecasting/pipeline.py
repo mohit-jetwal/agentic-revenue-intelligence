@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from app.config.settings import Settings, get_settings
@@ -44,9 +45,11 @@ from ml.forecasting.evaluate import (
     hierarchy_table,
     horizon_error_grows,
     revenue_impact,
+    seasonal_naive_scale,
     segment_errors,
     zero_demand_summary,
 )
+from ml.forecasting.exceptions import FeatureGenerationError
 from ml.forecasting.model import FittedForecastModel
 from ml.forecasting.sampling import sample_series
 from ml.forecasting.split import OriginSplit, build_origin_split, slice_fold
@@ -56,6 +59,7 @@ from ml.forecasting.train import (
     forecast_value_added,
     train_forecaster,
 )
+from ml.forecasting.tuning import TuningResult, best_params, tune
 
 logger = get_logger(__name__)
 
@@ -82,6 +86,7 @@ class ForecastPipelineResult:
     revenue: dict[str, float] = field(default_factory=dict)
     zero_demand: dict[str, float] = field(default_factory=dict)
     rationale: list[str] = field(default_factory=list)
+    tuning: TuningResult | None = None
     duration_seconds: float = 0.0
     model_path: Path | None = None
     mlflow_run_id: str | None = None
@@ -124,6 +129,17 @@ class ForecastPipelineResult:
                 "Positive means the model beat what a planner gets unaided. A bucket",
                 "at or below zero is a bucket where the seasonal naive should be used",
                 "instead - reported rather than smoothed over.",
+            ]
+
+        if self.tuning is not None and self.tuning.trials:
+            lines += ["", "## Hyperparameter search", "", self.tuning.summary(), ""]
+            lines.append(self.tuning.to_frame().head(8).to_string(index=False))
+            lines += [
+                "",
+                "Deliberately small: the model sits near the irreducible noise floor,",
+                "so hyperparameters compete for a few percentage points at most. A gain",
+                "under the fold-to-fold standard deviation is noise, and the defaults",
+                "are kept rather than adopting it.",
             ]
 
         if not self.stability.empty:
@@ -179,6 +195,7 @@ def train_forecast_pipeline(
     config: ForecastConfig | None = None,
     models: tuple[str, ...] | None = None,
     run_backtest: bool = True,
+    run_tuning: bool = False,
     track: bool = True,
     output_dir: Path | None = None,
     settings: Settings | None = None,
@@ -198,14 +215,20 @@ def train_forecast_pipeline(
     )
     history = build_history(repository, config, sample)
     if history.empty:
-        raise ValueError("the feature history is empty; generate a dataset first")
+        raise FeatureGenerationError(
+            "the feature history is empty; generate a dataset first",
+            stage="build_history",
+        )
 
     as_of = pd.to_datetime(history["date"]).dt.date.max()
     view = repository.as_of(as_of)
 
     dataset = build_horizon_dataset(history, view, config, sample)
     if dataset.frame.empty:
-        raise ValueError("the horizon dataset is empty; check the origin stride and warmup")
+        raise FeatureGenerationError(
+            "the horizon dataset is empty; check the origin stride and warmup",
+            stage="build_horizon_dataset",
+        )
 
     # The seasonal benchmark needs a reference from the target date, which the
     # generic feature panel does not carry.
@@ -217,10 +240,32 @@ def train_forecast_pipeline(
 
     split = build_origin_split(dataset.frame, config)
 
+    # -- optional tuning ----------------------------------------------------
+    # Runs before the candidates and scores on the VALIDATION fold only. The
+    # test fold stays untouched until selection, or every number after this
+    # point would be a self-report.
+    tuned_params: dict[str, Any] = {}
+    tuning_result: TuningResult | None = None
+    if run_tuning:
+        tuning_result = tune(
+            dataset,
+            split,
+            config,
+            lambda params: build_estimator(
+                "lightgbm", seed=config.sampling.seed, params=params or None
+            ),
+        )
+        tuned_params = best_params(
+            tuning_result, threshold_pp=config.tuning.min_improvement_pp
+        )
+        logger.info("forecast.tuning_outcome", adopted=bool(tuned_params))
+
     # -- candidates ---------------------------------------------------------
     trained: list[TrainedForecaster] = []
     for name in candidate_names:
-        estimator = build_estimator(name, seed=config.sampling.seed)
+        # Tuned parameters apply only to the estimator they were searched for.
+        params = tuned_params if name == "lightgbm" and tuned_params else None
+        estimator = build_estimator(name, seed=config.sampling.seed, params=params)
         trained.append(train_forecaster(dataset, estimator, config, split))
 
     benchmark = next((t for t in trained if t.name == BENCHMARK), None)
@@ -234,7 +279,12 @@ def train_forecast_pipeline(
             if candidate.name != BENCHMARK
         }
 
-    comparison, selected, rationale = _compare(trained, fva, config)
+    # The MASE denominator comes from the TRAINING fold. Taking it from the
+    # evaluation fold would make the metric partly self-referential.
+    mase_scale = seasonal_naive_scale(
+        slice_fold(dataset.frame, split.train_start, split.train_end)
+    )
+    comparison, selected, rationale = _compare(trained, fva, config, mase_scale)
 
     # -- diagnostics on the winner -----------------------------------------
     test = slice_fold(dataset.frame, split.test_start, split.test_end)
@@ -266,6 +316,7 @@ def train_forecast_pipeline(
         revenue=revenue_impact(scored),
         zero_demand=zero_demand_summary(scored),
         rationale=rationale,
+        tuning=tuning_result,
         duration_seconds=time.perf_counter() - started,
     )
 
@@ -308,6 +359,7 @@ def _compare(
     trained: list[TrainedForecaster],
     fva: dict[str, dict[str, float]],
     config: ForecastConfig,
+    mase_scale: float = float("nan"),
 ) -> tuple[pd.DataFrame, TrainedForecaster, list[str]]:
     """Build the comparison table and select from it.
 
@@ -327,6 +379,13 @@ def _compare(
                 "mae": test.mae if test else float("nan"),
                 "rmse": test.rmse if test else float("nan"),
                 "mape": test.mape if test and test.mape is not None else float("nan"),
+                # MAE scaled by the in-sample error of a weekly seasonal naive.
+                # Below 1.0 means the model beats doing nothing.
+                "mase": (
+                    test.mae / mase_scale
+                    if test and np.isfinite(mase_scale) and mase_scale > 0
+                    else float("nan")
+                ),
                 "bias_pct": test.bias_pct if test else float("nan"),
                 "mean_fva_pp": (
                     sum(bucket_fva.values()) / len(bucket_fva) if bucket_fva else float("nan")

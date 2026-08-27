@@ -154,6 +154,154 @@ def validate_data(
 
 
 @app.command()
+def forecast(
+    product: str = typer.Option(..., help="Product to forecast, e.g. P00003."),
+    store: str | None = typer.Option(None, help="Store. Omit to aggregate across stores."),
+    horizon: int = typer.Option(28, help="Days ahead: 7, 14, 28, 30 or 90."),
+    as_of: str | None = typer.Option(
+        None, help="Forecast origin (YYYY-MM-DD). Defaults to the latest fully-informed date."
+    ),
+    daily: bool = typer.Option(False, "--daily", help="Print the day-by-day path."),
+) -> None:
+    """Generate a demand forecast from the trained model.
+
+    Exits non-zero on a refusal, so this can gate a pipeline. A refusal is not a
+    crash: it prints the error code, whether re-planning could succeed, and what
+    would have worked instead.
+    """
+    from datetime import date as date_type
+
+    from app.schemas.domain import ForecastHorizon
+    from app.schemas.forecast import ForecastErrorResponse, ForecastRequest
+
+    configure_logging()
+
+    try:
+        selected = next(h for h in ForecastHorizon if h.days == horizon)
+    except StopIteration:
+        supported = ", ".join(str(h.days) for h in ForecastHorizon)
+        typer.echo(f"horizon must be one of {supported}; got {horizon}")
+        raise typer.Exit(code=2) from None
+
+    service = Container().forecasting_service
+    response = service.forecast(
+        ForecastRequest(
+            horizon=selected,
+            product_ids=[product],
+            store_ids=[store] if store else None,
+            as_of_date=date_type.fromisoformat(as_of) if as_of else None,
+            include_points=daily,
+        )
+    )
+
+    # `isinstance` rather than a status-string check: it narrows the union for
+    # the type checker as well as at runtime.
+    if isinstance(response, ForecastErrorResponse):
+        typer.echo(f"[{response.error_code}] {response.message}")
+        typer.echo(f"recoverable: {response.recoverable}")
+        if response.detail:
+            typer.echo(f"detail     : {response.detail}")
+        raise typer.Exit(code=1)
+
+    typer.echo(response.summary())
+    typer.echo("")
+    typer.echo(f"as of        : {response.as_of_date}")
+    typer.echo(f"series       : {response.series_count}")
+    if response.total_predicted_revenue is not None:
+        typer.echo(f"revenue      : {response.total_predicted_revenue:,.0f}")
+    if response.confidence is not None:
+        typer.echo(f"coverage     : {response.confidence:.0%} (measured, not asserted)")
+    if response.fallback_used:
+        typer.echo(f"fallback     : {response.fallback_reason}")
+
+    if daily and response.points:
+        typer.echo("")
+        typer.echo(f"{'date':<12}{'units':>10}{'lower':>10}{'upper':>10}")
+        for point in response.points:
+            lower = f"{point.lower_bound:,.0f}" if point.lower_bound is not None else "-"
+            upper = f"{point.upper_bound:,.0f}" if point.upper_bound is not None else "-"
+            typer.echo(
+                f"{point.date!s:<12}{point.predicted_units:>10,.1f}{lower:>10}{upper:>10}"
+            )
+
+    if response.warnings:
+        typer.echo("")
+        for warning in response.warnings:
+            typer.echo(f"  ! {warning}")
+
+
+@app.command("evaluate-forecast")
+def evaluate_forecast() -> None:
+    """Print the evaluation report for the persisted forecasting model.
+
+    Reads the report written at training time rather than re-scoring. Re-scoring
+    on demand would tempt a caller to treat "run it again" as a way to get a
+    number they preferred, and the report is already the justification for the
+    selection.
+    """
+    from ml.forecasting.config import get_forecast_config
+    from ml.forecasting.pipeline import default_output_dir
+
+    configure_logging()
+    config = get_forecast_config()
+
+    for directory in (
+        default_output_dir(config),
+        default_output_dir(config).parent / "forecasting_sampled",
+        default_output_dir(config).parent / "forecasting",
+    ):
+        report = directory / "evaluation_report.md"
+        if report.is_file():
+            typer.echo(report.read_text(encoding="utf-8"))
+            typer.echo("")
+            typer.echo(f"source: {report}")
+            return
+
+    typer.echo("No evaluation report found. Train a model first:")
+    typer.echo("  uv run python scripts/train_forecast.py --seed 42")
+    raise typer.Exit(code=1)
+
+
+@app.command("forecast-quality")
+def forecast_quality(
+    series: int = typer.Option(200, help="Series to sample for the check."),
+    seed: int = typer.Option(42, help="Sampling seed."),
+) -> None:
+    """Data-quality report on the forecasting grain.
+
+    Distinct from ``validate-data``, which checks the generated dataset against
+    its own contract. This asks whether the panel is fit to *forecast* from -
+    missing dates, duplicate grain, censored targets - which are different
+    questions with different answers.
+
+    Exits non-zero on any FAIL.
+    """
+    from ml.forecasting.config import get_forecast_config
+    from ml.forecasting.dataset import build_history
+    from ml.forecasting.quality import check_panel, missing_value_summary
+    from ml.forecasting.sampling import sample_series
+
+    configure_logging()
+    repository = Container().data_repository
+    config = get_forecast_config()
+
+    sample = sample_series(repository, n_series=series, seed=seed)
+    panel = build_history(repository, config, sample)
+
+    report = check_panel(panel)
+    typer.echo(report.render())
+
+    nulls = missing_value_summary(panel)
+    if not nulls.empty and nulls["null_rate"].iloc[0] > 0:
+        typer.echo("")
+        typer.echo("## Highest null rates")
+        typer.echo("")
+        typer.echo(nulls.to_string(index=False))
+
+    raise typer.Exit(code=0 if report.ok else 1)
+
+
+@app.command()
 def prompts() -> None:
     """List available prompt versions."""
     from prompts.registry import list_prompts

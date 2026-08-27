@@ -116,6 +116,35 @@ class StatisticalConfig(_Base):
     bottom_sample_series: int = Field(default=50, ge=0)
 
 
+def _default_search_space() -> dict[str, list[Any]]:
+    """Fallback space when the YAML omits one.
+
+    A named function rather than a lambda so the annotated return type reaches
+    the type checker - an inline lambda infers `dict[str, object]` and fails to
+    match the field.
+    """
+    return {
+        "learning_rate": [0.03, 0.05, 0.08, 0.12],
+        "num_leaves": [31, 63, 127, 255],
+        "min_child_samples": [20, 50, 100, 200],
+        "feature_fraction": [0.7, 0.85, 1.0],
+        "bagging_fraction": [0.7, 0.85, 1.0],
+        "lambda_l2": [0.0, 1.0, 5.0, 20.0],
+    }
+
+
+class TuningConfig(_Base):
+    """Hyperparameter search settings.
+
+    Small on purpose - see ``ml/forecasting/tuning.py`` for why a large sweep
+    would be worse than none on this data.
+    """
+
+    n_trials: int = Field(default=20, gt=0, le=200)
+    min_improvement_pp: float = Field(default=0.005, ge=0.0)
+    space: dict[str, list[Any]] = Field(default_factory=_default_search_space)
+
+
 class ExplainabilityConfig(_Base):
     top_n_features: int = Field(default=40, gt=0)
     permutation_repeats: int = Field(default=3, gt=0)
@@ -126,7 +155,7 @@ class ForecastConfig(_Base):
 
     target: str = "units"
     grain: tuple[str, ...] = ("date", "product_id", "store_id")
-    forecast_horizons: tuple[int, ...] = (7, 14, 30, 90)
+    forecast_horizons: tuple[int, ...] = (7, 14, 28, 30, 90)
     max_horizon: int = Field(default=90, gt=0)
 
     sampling: SamplingConfig = Field(default_factory=SamplingConfig)
@@ -136,6 +165,7 @@ class ForecastConfig(_Base):
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     intervals: IntervalConfig = Field(default_factory=IntervalConfig)
     statistical: StatisticalConfig = Field(default_factory=StatisticalConfig)
+    tuning: TuningConfig = Field(default_factory=TuningConfig)
     explainability: ExplainabilityConfig = Field(default_factory=ExplainabilityConfig)
 
     @model_validator(mode="after")

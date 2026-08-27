@@ -34,7 +34,6 @@ import pandas as pd
 
 from app.observability.logging import get_logger
 from data.repositories.point_in_time import PointInTimeView
-from ml.base import InsufficientDataError
 from ml.forecasting.baselines import attach_seasonal_reference
 from ml.forecasting.config import ForecastConfig
 from ml.forecasting.conformal import HorizonCalibration, add_horizon_intervals, aggregate_interval
@@ -44,6 +43,7 @@ from ml.forecasting.dataset import (
     build_future_scaffold,
     latest_known_date,
 )
+from ml.forecasting.exceptions import HorizonUnavailableError, InsufficientHistoryError
 
 logger = get_logger(__name__)
 
@@ -111,17 +111,23 @@ def validate_as_of(
 
     if horizon_end > known_until:
         latest_valid = known_until - timedelta(days=horizon_days)
-        raise InsufficientDataError(
+        raise HorizonUnavailableError(
             f"a {horizon_days}-day horizon from {as_of} reaches {horizon_end}, but "
             f"the calendar, promotion schedule and price plan end {known_until}. "
             f"Forecasting past that would mean assuming no promotions are planned, "
             f"which biases those days low. The latest as-of that supports a "
-            f"{horizon_days}-day horizon is {latest_valid}."
+            f"{horizon_days}-day horizon is {latest_valid}.",
+            horizon_days=horizon_days,
+            known_until=known_until,
+            latest_valid_as_of=latest_valid,
         )
 
     if as_of > known_until:
-        raise InsufficientDataError(
-            f"as_of {as_of} is past the end of available data ({known_until})"
+        raise HorizonUnavailableError(
+            f"as_of {as_of} is past the end of available data ({known_until})",
+            horizon_days=horizon_days,
+            known_until=known_until,
+            latest_valid_as_of=known_until - timedelta(days=horizon_days),
         )
 
 
@@ -153,8 +159,9 @@ def generate_forecast(
         view, history, pairs, as_of=as_of, horizon_days=horizon_days
     )
     if scaffold.empty:
-        raise InsufficientDataError(
-            f"no history for the requested series at or before {as_of}"
+        raise InsufficientHistoryError(
+            f"no history for the requested series at or before {as_of}",
+            available_days=0,
         )
 
     # The seasonal benchmark's reference column, needed by the fallback and by

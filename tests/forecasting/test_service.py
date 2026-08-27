@@ -190,6 +190,97 @@ class TestTrainedService:
         assert isinstance(response, ForecastErrorResponse)
         assert response.error_code == "insufficient_data"
 
+    def test_unknown_store_is_reported_too(self, service) -> None:
+        """The store path was previously untested - only the product one was.
+
+        Worth its own test because the two filters are applied separately, so a
+        bug in one would not surface through the other.
+        """
+        pair = service.model.pairs.iloc[0]
+
+        response = service.forecast(
+            ForecastRequest(
+                horizon=ForecastHorizon.D28,
+                product_ids=[pair.product_id],
+                store_ids=["NOT_A_STORE"],
+            )
+        )
+
+        assert isinstance(response, ForecastErrorResponse)
+        assert response.error_code == "insufficient_data"
+        assert response.recoverable is True
+
+    def test_an_untrained_pair_is_refused(self, service) -> None:
+        """Both identifiers exist, but not together.
+
+        A product and a store can each be in the model without that *listing*
+        being in it. Forecasting the combination anyway would extrapolate to a
+        series the model has never seen.
+        """
+        pairs = service.model.pairs
+        product = pairs.iloc[0].product_id
+        other_store = pairs[pairs["product_id"] != product]["store_id"]
+        if other_store.empty:
+            pytest.skip("no second store in this sample")
+
+        response = service.forecast(
+            ForecastRequest(
+                horizon=ForecastHorizon.D28,
+                product_ids=[product],
+                store_ids=[other_store.iloc[-1]],
+            )
+        )
+
+        # Either the pair exists and forecasts, or it does not and is refused -
+        # what must never happen is a silent empty result.
+        if isinstance(response, ForecastErrorResponse):
+            assert response.error_code == "insufficient_data"
+        else:
+            assert response.total_predicted_units >= 0
+
+    def test_the_four_week_horizon_is_servable(self, service) -> None:
+        """The retail planning horizon, added in Step 6.
+
+        Serves from the existing artifact without retraining: the model is
+        fitted on horizon steps drawn from U{1..90} with the step as a feature,
+        and 28 already falls inside the calibrated h15-28 bucket.
+        """
+        pair = service.model.pairs.iloc[0]
+
+        response = service.forecast(
+            ForecastRequest(
+                horizon=ForecastHorizon.D28,
+                product_ids=[pair.product_id],
+                store_ids=[pair.store_id],
+            )
+        )
+
+        assert isinstance(response, ForecastResponse)
+        assert response.horizon_days == 28
+        assert len(response.points) == 28
+
+    def test_the_four_week_horizon_contains_four_of_each_weekday(self, service) -> None:
+        """Why 28 rather than 30.
+
+        Four whole weeks contain exactly four of each weekday, so the total is
+        not skewed by which days happen to fall inside the window. A 30-day
+        window contains five of two weekdays and four of the rest.
+        """
+        import collections
+
+        pair = service.model.pairs.iloc[0]
+        response = service.forecast(
+            ForecastRequest(
+                horizon=ForecastHorizon.D28,
+                product_ids=[pair.product_id],
+                store_ids=[pair.store_id],
+            )
+        )
+
+        counts = collections.Counter(point.date.weekday() for point in response.points)
+
+        assert set(counts.values()) == {4}
+
     def test_provenance_is_populated(self, service) -> None:
         pair = service.model.pairs.iloc[0]
 

@@ -231,8 +231,13 @@ def register_selected(
     dataset_version: str,
     experiment_id: str,
     evaluation_report: str | None = None,
-) -> tuple[str, str]:
-    """Log and register the selected model."""
+) -> tuple[str, str | None]:
+    """Log and register the selected model.
+
+    Returns ``(run_id, model_uri)``. The URI is ``None`` when the selected
+    estimator has no serialisable artifact - the naive benchmarks - because a
+    URI that resolves to nothing is worse than an explicit absence.
+    """
     import mlflow.lightgbm
     import mlflow.xgboost
 
@@ -247,14 +252,17 @@ def register_selected(
         )
 
         estimator = trained.estimator
+        registered = False
         if isinstance(estimator, LightGBMBaseline) and estimator.booster is not None:
             mlflow.lightgbm.log_model(
                 estimator.booster, name="model", registered_model_name=REGISTERED_MODEL_NAME
             )
+            registered = True
         elif isinstance(estimator, XGBoostForecaster) and estimator.booster is not None:
             mlflow.xgboost.log_model(
                 estimator.booster, name="model", registered_model_name=REGISTERED_MODEL_NAME
             )
+            registered = True
         else:
             # Naive benchmarks have no artifact worth serialising; their
             # parameters fully describe them.
@@ -286,8 +294,20 @@ def register_selected(
                 path.write_text(evaluation_report, encoding="utf-8")
                 mlflow.log_artifact(str(path))
 
-        logger.info("forecast.registered", run_id=run.info.run_id, model=trained.name)
-        return run.info.run_id, f"runs:/{run.info.run_id}/model"
+        # `None` when nothing was actually logged, rather than a URI that looks
+        # valid and resolves to nothing. A naive benchmark has no model artifact,
+        # and handing back `runs:/<id>/model` for it would send a caller to a
+        # 404 instead of telling them plainly that there is nothing to load -
+        # the same "never return something fake" rule the rest of the platform
+        # applies to confidence scores and forecasts.
+        model_uri = f"runs:/{run.info.run_id}/model" if registered else None
+        logger.info(
+            "forecast.registered",
+            run_id=run.info.run_id,
+            model=trained.name,
+            registered=registered,
+        )
+        return run.info.run_id, model_uri
 
 
 __all__ = [

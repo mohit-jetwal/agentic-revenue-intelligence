@@ -15,7 +15,11 @@ grain:
 
 # The horizons the service exposes. `max_horizon` bounds the training draw and
 # must be >= the largest of these.
-forecast_horizons: [7, 14, 30, 90]
+#
+# 28 is the retail planning horizon - four whole weeks, so the total contains
+# exactly four of each weekday. A 30-day window contains five of two weekdays
+# and four of the rest, which biases the total toward whichever two those are.
+forecast_horizons: [7, 14, 28, 30, 90]
 max_horizon: 90
 
 sampling:
@@ -92,6 +96,27 @@ statistical:
   # A stratified sample at product-store grain, purely to answer "is a classical
   # univariate model competitive where the global model actually operates?"
   bottom_sample_series: 50
+
+tuning:
+  # Deliberately small. The model sits at ~1.25x the irreducible noise floor, so
+  # only ~9 WMAPE points are learnable in total and hyperparameters compete for a
+  # fraction of that. A large sweep would spend hours to move a number whose own
+  # fold-to-fold standard deviation is around one point - and with enough trials
+  # the best score is simply the luckiest one.
+  n_trials: 20
+  # Below this gain, keep the defaults. Backtest std runs 0.3-1.8 points, so a
+  # smaller "win" is indistinguishable from which fold you happened to look at.
+  min_improvement_pp: 0.005
+  # Random search rather than grid: for the same budget it explores each
+  # parameter at more distinct values, and most of these matter far less than
+  # learning_rate and num_leaves.
+  space:
+    learning_rate: [0.03, 0.05, 0.08, 0.12]
+    num_leaves: [31, 63, 127, 255]
+    min_child_samples: [20, 50, 100, 200]
+    feature_fraction: [0.7, 0.85, 1.0]
+    bagging_fraction: [0.7, 0.85, 1.0]
+    lambda_l2: [0.0, 1.0, 5.0, 20.0]
 
 explainability:
   # Permutation importance over the top N features by gain. All 180 would be

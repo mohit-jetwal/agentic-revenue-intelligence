@@ -50,6 +50,80 @@ def metrics_by_horizon_bucket(
     return results
 
 
+def seasonal_naive_scale(
+    train: pd.DataFrame,
+    *,
+    season_length: int = 7,
+    actual_column: str = TARGET,
+    date_column: str = TARGET_DATE,
+    keys: tuple[str, ...] = ("product_id", "store_id"),
+) -> float:
+    """The MASE denominator: in-sample MAE of a seasonal naive.
+
+    Computed on the **training fold only**, and that is the whole subtlety. MASE
+    scales the model's error by the error a naive forecaster would have made *on
+    data the model was fitted on*. Taking the denominator from the evaluation
+    fold instead makes the metric partly self-referential - both numerator and
+    denominator would then move with the same held-out noise, and a model could
+    improve its MASE by getting worse in a period where the naive got worse
+    faster.
+
+    ``season_length=7`` because demand here is far more weekly than annual: the
+    measured weekly peak-to-trough swing dominates the annual one, so the
+    one-week-ago value is the natural "no effort" comparison. A yearly scale
+    (364) would make almost any model look excellent, which is exactly the kind
+    of flattering benchmark MASE exists to avoid.
+
+    Returns ``nan`` when the scale cannot be computed, so callers report an
+    absent MASE rather than dividing by an invented denominator.
+    """
+    if train.empty or actual_column not in train.columns:
+        return float("nan")
+
+    working = train[[*keys, date_column, actual_column]].copy()
+    working[date_column] = pd.to_datetime(working[date_column])
+    working = working.sort_values([*keys, date_column])
+
+    # Differences are taken within a series, never across the boundary between
+    # two series - a cross-series difference is meaningless.
+    previous = working.groupby(list(keys), observed=True)[actual_column].shift(season_length)
+    differences = (working[actual_column] - previous).abs().dropna()
+
+    if differences.empty:
+        return float("nan")
+
+    scale = float(differences.mean())
+    return scale if scale > 0 else float("nan")
+
+
+def mase(
+    actual: pd.Series,
+    predicted: pd.Series,
+    scale: float,
+) -> float:
+    """Mean Absolute Scaled Error.
+
+    ``MAE(model) / MAE(seasonal naive, in-sample)``. Below 1 means the model
+    beats a naive forecaster; above 1 means it does not.
+
+    Reported **alongside** WMAPE rather than instead of it, because the two
+    answer different questions. WMAPE says how wrong the forecast is, weighted
+    by volume - the question a planner holding inventory asks. MASE says whether
+    the model is worth having at all, on a scale that is comparable across
+    series with wildly different volumes. Neither substitutes for the other.
+    """
+    if not np.isfinite(scale) or scale <= 0:
+        return float("nan")
+
+    y = pd.to_numeric(actual, errors="coerce")
+    yhat = pd.to_numeric(predicted, errors="coerce")
+    errors = (y - yhat).abs().dropna()
+    if errors.empty:
+        return float("nan")
+
+    return float(errors.mean() / scale)
+
+
 def horizon_error_grows(bucket_metrics: dict[str, BaselineMetrics]) -> bool:
     """Does error over long horizons exceed error over short ones?
 

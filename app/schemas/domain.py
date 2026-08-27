@@ -91,10 +91,24 @@ class RiskLevel(StrEnum):
 
 
 class ForecastHorizon(StrEnum):
-    """Supported forecast horizons (brief section 8)."""
+    """Supported forecast horizons.
+
+    ``D28`` is the retail planning horizon - four whole weeks. It matters more
+    than the round-number alternatives because demand is strongly weekly: a
+    28-day window contains exactly four of each weekday, so the total is not
+    skewed by whichever days happen to fall inside it. A 30-day window contains
+    four of some weekdays and five of others, which quietly biases the total
+    toward whatever those two extra days happen to be.
+
+    Adding it required no retraining. The model is fitted on horizon steps drawn
+    from ``U{1..90}`` with the step itself as a feature, and 28 already falls
+    inside the calibrated ``h15-28`` interval bucket - so the existing artifact
+    serves it directly.
+    """
 
     D7 = "7d"
     D14 = "14d"
+    D28 = "28d"
     D30 = "30d"
     D90 = "90d"
 

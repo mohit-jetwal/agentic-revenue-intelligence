@@ -105,6 +105,7 @@ ignore = [
 # and make the source harder to edit than the document it produces.
 "docs/**" = ["E501"]
 "tests/models/**" = ["S101", "N803", "N806"]
+"tests/forecasting/**" = ["S101", "N803", "N806"]
 
 [tool.mypy]
 python_version = "3.12"

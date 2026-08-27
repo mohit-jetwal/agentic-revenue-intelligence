@@ -43,7 +43,7 @@ class ForecastResult(BaseModel):
 
 
 class ForecastingModel(AnalyticalModel[ForecastResult]):
-    """Demand forecaster supporting 7/14/30/90-day horizons."""
+    """Demand forecaster supporting 7/14/28/30/90-day horizons."""
 
     name = "demand_forecast"
 

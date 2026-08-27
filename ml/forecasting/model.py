@@ -25,11 +25,12 @@ from app.observability.logging import get_logger
 from app.schemas.domain import ForecastHorizon
 from data.repositories.base import DataRepository
 from features.contracts.specs import FEATURE_VERSION, current_code_version
-from ml.base import InsufficientDataError, ModelMetadata, ModelNotFittedError
+from ml.base import ModelMetadata
 from ml.forecasting.baselines import HorizonSeasonalNaive
 from ml.forecasting.config import ForecastConfig
 from ml.forecasting.conformal import HorizonCalibration
 from ml.forecasting.dataset import KEYS, TARGET_DATE, build_history
+from ml.forecasting.exceptions import ModelUnavailableError, UnknownSeriesError
 from ml.forecasting.interface import ForecastingModel, ForecastPoint, ForecastResult
 from ml.forecasting.predict import (
     PREDICTED,
@@ -185,7 +186,7 @@ class FittedForecastModel(ForecastingModel):
         they preferred.
         """
         if not self._metrics:
-            raise ModelNotFittedError(
+            raise ModelUnavailableError(
                 "no backtest metrics recorded; retrain with backtesting enabled"
             )
         return dict(self._metrics)
@@ -203,12 +204,17 @@ class FittedForecastModel(ForecastingModel):
     ) -> ForecastFrame:
         """Per-series, per-day forecasts."""
         if self.trained is None or self.config is None:
-            raise ModelNotFittedError("no trained forecaster loaded")
+            raise ModelUnavailableError("no trained forecaster loaded")
 
         pairs = self._select_pairs(product_ids, store_ids, region)
         if pairs.empty:
-            raise InsufficientDataError(
-                "no trained series match the requested product/store/region filters"
+            raise UnknownSeriesError(
+                "no trained series match the requested product/store/region filters. "
+                "The model can only forecast series it was trained on - an empty "
+                "result here would read as 'no demand expected', which is a "
+                "different claim entirely.",
+                product_ids=product_ids,
+                store_ids=store_ids,
             )
 
         history = self._load_history()
@@ -276,7 +282,7 @@ class FittedForecastModel(ForecastingModel):
         """Feature history for the trained series, built once and cached."""
         if self._history is None:
             if self.config is None:
-                raise ModelNotFittedError("no configuration loaded")
+                raise ModelUnavailableError("no configuration loaded")
             sample = SeriesSample(
                 pairs=self.pairs,
                 product_ids=sorted(self.pairs["product_id"].unique().tolist()),
@@ -295,7 +301,7 @@ class FittedForecastModel(ForecastingModel):
         requires the exact environment that wrote it.
         """
         if self.trained is None or self.config is None:
-            raise ModelNotFittedError("nothing to save")
+            raise ModelUnavailableError("nothing to save")
 
         directory.mkdir(parents=True, exist_ok=True)
         joblib.dump(

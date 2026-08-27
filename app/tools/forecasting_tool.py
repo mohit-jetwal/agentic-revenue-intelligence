@@ -55,7 +55,11 @@ class ForecastInput(BaseModel):
     )
     region: str | None = Field(default=None, description="Restrict to one region.")
     forecast_horizon: int = Field(
-        default=30, description="Days ahead to forecast. One of 7, 14, 30 or 90."
+        default=28,
+        description=(
+            "Days ahead to forecast. One of 7, 14, 28, 30 or 90. "
+            "28 is four whole weeks and is the usual retail planning horizon."
+        ),
     )
     as_of_date: date | None = Field(
         default=None,
@@ -92,8 +96,9 @@ class ForecastingTool(AnalyticalTool[ForecastInput, ForecastOutput]):
 
     name = "forecast_demand"
     description = (
-        "Forecast future demand for a product, store, or region over a 7, 14, 30 "
-        "or 90 day horizon. Returns total predicted units with a calibrated "
+        "Forecast future demand for a product, store, or region over a 7, 14, 28, "
+        "30 or 90 day horizon (28 days is four whole weeks, the usual retail "
+        "planning window). Returns total predicted units with a calibrated "
         "prediction interval, an optional day-by-day path, and the model's "
         "measured historical accuracy at that horizon. This is a *predictive* "
         "forecast given planned prices and promotions - it does not estimate what "

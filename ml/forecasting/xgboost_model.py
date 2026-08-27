@@ -30,6 +30,7 @@ import xgboost as xgb
 
 from app.observability.logging import get_logger
 from ml.baseline.models import BaselineEstimator
+from ml.forecasting.exceptions import ModelUnavailableError
 
 logger = get_logger(__name__)
 
@@ -151,7 +152,7 @@ class XGBoostForecaster(BaselineEstimator):
 
     def _predict(self, X: pd.DataFrame) -> np.ndarray:
         if self._booster is None:
-            raise RuntimeError("xgboost booster is missing")
+            raise ModelUnavailableError("xgboost booster is missing")
 
         matrix = self._to_dmatrix(X[self._feature_names])
         if self._best_iteration is not None:

@@ -27,6 +27,11 @@ from ml.forecasting.baselines import HorizonNaive, HorizonSeasonalNaive
 from ml.forecasting.config import ForecastConfig
 from ml.forecasting.conformal import HorizonCalibration, calibrate_by_horizon
 from ml.forecasting.dataset import HORIZON_STEP, TARGET, HorizonDataset
+from ml.forecasting.exceptions import (
+    FeatureGenerationError,
+    InsufficientHistoryError,
+    InvalidForecastRequestError,
+)
 from ml.forecasting.split import OriginSplit, slice_fold
 from ml.forecasting.xgboost_model import XGBoostForecaster
 
@@ -42,10 +47,31 @@ ESTIMATORS: dict[str, type[BaselineEstimator]] = {
 }
 
 
-def build_estimator(name: str, *, seed: int = 42) -> BaselineEstimator:
+def build_estimator(
+    name: str, *, seed: int = 42, params: dict[str, Any] | None = None
+) -> BaselineEstimator:
+    """Construct one candidate.
+
+    ``params`` overrides the estimator's defaults and is how tuned
+    hyperparameters reach the model. Silently ignored by estimators that take
+    none - the naive benchmarks have nothing to tune, and refusing the argument
+    would force every caller to special-case them.
+    """
     if name not in ESTIMATORS:
-        raise KeyError(f"unknown estimator {name!r}; available: {sorted(ESTIMATORS)}")
-    return ESTIMATORS[name](seed=seed)
+        raise InvalidForecastRequestError(
+            f"unknown estimator {name!r}; available: {sorted(ESTIMATORS)}",
+            requested=name,
+            available=sorted(ESTIMATORS),
+        )
+
+    estimator_class = ESTIMATORS[name]
+    if params:
+        try:
+            return estimator_class(seed=seed, params=params)  # type: ignore[call-arg]
+        except TypeError:
+            logger.debug("forecast.params_ignored", model=name)
+
+    return estimator_class(seed=seed)
 
 
 @dataclass
@@ -73,8 +99,11 @@ class TrainedForecaster:
         """Predict on a raw frame, applying the training encodings."""
         missing = [c for c in self.feature_names if c not in frame.columns]
         if missing:
-            raise ValueError(
-                f"frame is missing {len(missing)} training features, e.g. {missing[:5]}"
+            raise FeatureGenerationError(
+                f"frame is missing {len(missing)} training features, e.g. {missing[:5]}",
+                stage="predict",
+                missing_count=len(missing),
+                missing_sample=missing[:5],
             )
         return self.estimator.predict(
             _prepare(frame, self.feature_names, self.categories)
@@ -178,7 +207,10 @@ def train_forecaster(
     test = slice_fold(frame, split.test_start, split.test_end)
 
     if train.empty:
-        raise ValueError("training fold is empty; the split or the panel is wrong")
+        raise InsufficientHistoryError(
+            "training fold is empty; the split or the panel is wrong",
+            available_days=0,
+        )
 
     # Derived from the whole dataset, not the training fold, so every fold and
     # every future prediction encodes the same level to the same code.

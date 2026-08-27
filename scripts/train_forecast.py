@@ -56,6 +56,14 @@ def main() -> int:
     parser.add_argument(
         "--no-backtest", action="store_true", help="Skip walk-forward validation."
     )
+    parser.add_argument(
+        "--tune",
+        action="store_true",
+        help=(
+            "Run a small seeded hyperparameter search on the validation fold "
+            "before training. Adds roughly one extra fit per trial."
+        ),
+    )
     parser.add_argument("--no-track", action="store_true", help="Skip MLflow logging.")
     parser.add_argument(
         "--output", type=Path, default=None, help="Write model artifacts here."
@@ -89,6 +97,7 @@ def main() -> int:
         config=config,
         models=tuple(args.models) if args.models else None,
         run_backtest=not args.no_backtest,
+        run_tuning=args.tune,
         track=not args.no_track,
         output_dir=args.output,
     )
@@ -101,6 +110,12 @@ def main() -> int:
     print(f"Selected: {result.selected.name}")
     for reason in result.rationale:
         print(f"  - {reason}")
+
+    if result.tuning is not None and result.tuning.trials:
+        print()
+        print("Hyperparameter search")
+        print(f"  {result.tuning.summary()}")
+        print(result.tuning.to_frame().head(5).to_string(index=False))
 
     print()
     print("Accuracy by horizon bucket")

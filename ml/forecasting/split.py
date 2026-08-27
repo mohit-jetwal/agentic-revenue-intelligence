@@ -30,6 +30,7 @@ import pandas as pd
 from app.observability.logging import get_logger
 from ml.forecasting.config import ForecastConfig
 from ml.forecasting.dataset import ORIGIN_DATE, TARGET_DATE
+from ml.forecasting.exceptions import InsufficientHistoryError
 
 logger = get_logger(__name__)
 
@@ -99,13 +100,15 @@ def build_origin_split(
     required = test_days + valid_days + calibration_days + (3 * embargo) + 120
     available = (last - first).days
     if available < required:
-        raise ValueError(
+        raise InsufficientHistoryError(
             f"only {available} days of origins but the split needs {required} "
             f"(test {test_days} + valid {valid_days} + calibration "
             f"{calibration_days} + 3 embargo gaps of {embargo} + at least 120 "
             f"for training). The embargo is what makes the evaluation honest at "
             f"a {config.max_horizon}-day horizon; shortening it would be "
-            f"cheaper and wrong."
+            f"cheaper and wrong.",
+            available_days=available,
+            required_days=required,
         )
 
     test_end = last

@@ -316,6 +316,60 @@ schema is now pinned at fit time and coerced at predict time.
 
 ---
 
+## MLflow strategy
+
+Experiment: **`revenue_intelligence_forecasting`**. Registered model:
+**`demand_forecast`**.
+
+### Run structure
+
+```
+comparison_<timestamp>              parent run - the selection itself
+├── horizon_naive                   nested candidate
+├── horizon_seasonal_naive          nested candidate
+├── lightgbm                        nested candidate
+└── xgboost                         nested candidate
+registered_<selected>               separate run, carries the model artifact
+```
+
+Nested rather than flat because the *comparison* is the unit of work. A flat run
+per candidate loses the fact that four models were trained on one dataset with one
+split and compared under one rule — which is exactly what a reviewer needs to see.
+
+### What is logged
+
+| Kind | Contents |
+|---|---|
+| Params | model type, seed, feature count, series count, max horizon, origin stride, horizons per origin, **embargo days**, dataset/feature/model/code version, **config fingerprint**, every split boundary, every hyperparameter prefixed `hp_` |
+| Metrics | every field of each metric set as `{fold}_{metric}`; **per-bucket** `bucket_{h}_wmape`, `_bias_pct`, `_n`; `fva_{bucket}_pp`; train and predict seconds |
+| Artifacts | `feature_importance.csv`, `backtest_folds.csv`, `training_config.json`, `model_comparison.csv`, `selection_rationale.md`, `model_metadata.json`, `evaluation_report.md` |
+| Tags | `stage` = candidate / comparison / registered, `model_type`, `model_version` |
+
+Metrics are logged **per horizon bucket rather than blended**, for the same reason
+they are reported that way: a single averaged number describes no decision anyone
+makes.
+
+### Two deliberate behaviours
+
+**Tracking failures never fail the run, and the evaluation report is written
+first.** A three-hour Step 4 run was lost when MLflow rejected its own default
+store *after* every model had been fitted. Bookkeeping must not destroy the thing
+it is keeping books on.
+
+**`register_selected` returns `None` for the model URI when nothing was
+registered.** The naive benchmarks have no serialisable artifact, and handing back
+a `runs:/<id>/model` URI for them would send a caller to a 404 rather than telling
+them plainly there is nothing to load — the same "never return something fake" rule
+applied to confidence scores and forecasts.
+
+### Reproducibility
+
+The **config fingerprint** is one hash over the entire `ForecastConfig`. Two runs
+sharing it used the same setup; two that differ are not comparable, and the
+difference is discoverable rather than argued about. `code_version` comes from
+`git rev-parse --short HEAD`, best-effort — recorded as `"unknown"` rather than
+omitted when git is unavailable, so its absence is visible.
+
 ## Known limitations
 
 | Limitation | Consequence |
@@ -329,6 +383,28 @@ schema is now pinned at fit time and coerced at predict time.
 | `--full` is a multi-hour run | The default samples 800 of 6,128 series; the sampled artifact is written to a separate directory so it cannot masquerade as the full model |
 
 ---
+
+## V2: what would come next, and why it is not here
+
+Deliberately not built. V1 is seasonal naive + LightGBM/XGBoost + walk-forward +
+MLflow + service + tests, and each item below was considered and deferred with a
+reason rather than overlooked.
+
+| Improvement | Why it would help | Why not now |
+|---|---|---|
+| **Probabilistic forecasting** (quantile or distributional objectives) | A full predictive distribution beats an interval for inventory decisions, where the cost of over- and under-stocking is asymmetric | Conformal already gives *measured* coverage. A quantile model would need its own calibration evidence to beat that, and the current intervals are honest |
+| **Hierarchical reconciliation** (MinT) | Reconciles independently-fitted level forecasts optimally | Bottom-up is *already exactly coherent*. MinT needs a 6128×6128 error covariance and only pays when you have genuinely independent multi-level forecasts, which this design deliberately does not produce |
+| **Deep learning** (N-BEATS, TFT) | Learns cross-series structure a GBM cannot | The model sits at **1.25× the irreducible noise floor** — there are ~9 WMAPE points of learnable signal in total. Architecture is not the binding constraint |
+| **Conformal refinements** (adaptive, weighted) | Handles distribution shift better than the exchangeability assumption | Coverage is currently measured near nominal per bucket. Fix the problem when it is visible |
+| **Global/local hybrid** | High-volume series may deserve their own model | Would need evidence that the top series are systematically underserved. Not yet measured |
+| **Automated retraining** | Keeps the model fresh without intervention | Needs the drift detection below to trigger it, and a production cadence that does not exist locally |
+| **Drift detection** | Catches the model going stale before a planner does | `monitoring.py` computes PSI and forecast-vs-actual today. What is missing is thresholds — and a threshold invented without serving traffic is theatre |
+| **Feature store** | Removes train/serve skew structurally | The skew is currently prevented by one shared function plus a test asserting both paths agree. A feature store is the Stage 2 answer |
+
+The through-line: most of these solve problems this model does not yet have. The
+one that would genuinely help first is **probabilistic forecasting for
+asymmetric-cost inventory decisions** — and that is a Step 9+ concern, once
+optimisation exists to consume it.
 
 ## Usage
 
