@@ -278,13 +278,21 @@ def event_level_impact(
 
     price, margin, rate = unit_economics(analysis, config=settings)
 
-    grouped = treated.groupby("promotion_id", observed=True).agg(
-        product_id=("product_id", "first"),
-        store_id=("store_id", "first"),
-        treated_days=("_cate", "size"),
-        uplift_units_per_day=("_cate", "mean"),
-        observed_units=(settings.target, "sum"),
-    )
+    aggregations: dict[str, tuple[str, str]] = {
+        "product_id": ("product_id", "first"),
+        "store_id": ("store_id", "first"),
+        "treated_days": ("_cate", "size"),
+        "uplift_units_per_day": ("_cate", "mean"),
+        "observed_units": (settings.target, "sum"),
+    }
+    # Carried through for Step 9's allocator, which constrains spend by region
+    # and category. Without them a constraint like "at least 20% in the North"
+    # matches no candidate and cannot be applied at all.
+    for dimension in ("region", "category", "channel"):
+        if dimension in treated.columns:
+            aggregations[dimension] = (dimension, "first")
+
+    grouped = treated.groupby("promotion_id", observed=True).agg(**aggregations)
     grouped["incremental_units"] = (
         grouped["uplift_units_per_day"] * grouped["treated_days"]
     )

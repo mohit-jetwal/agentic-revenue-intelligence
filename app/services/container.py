@@ -37,6 +37,7 @@ from app.services.model_registry import (
     MLflowModelRegistry,
     ModelRegistry,
 )
+from app.services.optimization_service import OptimizationService
 from app.services.promo_uplift_service import PromoUpliftService
 from app.tools.registry import ToolRegistry, build_default_registry
 from data.repositories.base import DataRepository
@@ -163,6 +164,16 @@ class Container:
         """
         return ElasticityService(self.data_repository, settings=self.settings)
 
+    @cached_property
+    def optimization_service(self) -> OptimizationService:
+        """Budget allocation, price optimisation and scenarios (Step 9).
+
+        One service for three capabilities because they share dependencies -
+        all three consume the elasticity and uplift estimates, and three
+        services would build three copies of the same models.
+        """
+        return OptimizationService(self.data_repository, settings=self.settings)
+
     # -- retrieval ----------------------------------------------------------
 
     @cached_property
@@ -215,6 +226,7 @@ class Container:
             forecasting_service=self.forecasting_service,
             promo_uplift_service=self.promo_uplift_service,
             elasticity_service=self.elasticity_service,
+            optimization_service=self.optimization_service,
         )
 
     # -- per-request objects ------------------------------------------------
