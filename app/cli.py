@@ -9,6 +9,8 @@ evaluation commands are added by their respective steps.
 
 from __future__ import annotations
 
+from typing import Any
+
 import typer
 
 from app.config.settings import get_settings
@@ -299,6 +301,212 @@ def forecast_quality(
         typer.echo(nulls.to_string(index=False))
 
     raise typer.Exit(code=0 if report.ok else 1)
+
+
+@app.command()
+def uplift(
+    promotion: str | None = typer.Option(None, help="A specific promotion id."),
+    product: str | None = typer.Option(None, help="Restrict to one product."),
+    store: str | None = typer.Option(None, help="Restrict to one store."),
+    region: str | None = typer.Option(None, help="Restrict to one region."),
+    events: int = typer.Option(10, help="Individual promotions to list."),
+    segments: bool = typer.Option(True, help="Show segment-level uplift."),
+) -> None:
+    """Incremental sales and profit caused by a promotion.
+
+    Prints the treatment definition first. An uplift number is uninterpretable
+    without it - "+18%" measured over the event window and "+18%" net of
+    pull-forward are different quantities, and only one of them is the return on
+    a promotion.
+
+    Exits non-zero on a refusal, or when causal validation failed.
+    """
+    from app.schemas.promo_uplift import UpliftErrorResponse, UpliftRequest
+
+    configure_logging()
+    response = Container().promo_uplift_service.estimate_uplift(
+        UpliftRequest(
+            promotion_ids=[promotion] if promotion else None,
+            product_ids=[product] if product else None,
+            store_ids=[store] if store else None,
+            region=region,
+            include_segments=segments,
+            max_events=max(events, 1),
+        )
+    )
+
+    if isinstance(response, UpliftErrorResponse):
+        typer.echo(f"[{response.error_code}] {response.message}")
+        typer.echo(f"recoverable: {response.recoverable}")
+        if response.detail:
+            typer.echo(f"detail     : {response.detail}")
+        raise typer.Exit(code=1)
+
+    typer.echo(f"Estimand: {response.treatment_definition}")
+    typer.echo("")
+    interval = ""
+    if response.confidence_interval is not None:
+        band = response.confidence_interval
+        interval = (
+            f"  [{band.lower:+.1%}, {band.upper:+.1%}] "
+            f"at {band.confidence_level:.0%}"
+        )
+    typer.echo(f"uplift          : {response.uplift_pct:+.1%}{interval}")
+    typer.echo(f"incremental     : {response.incremental_units:,.0f} units")
+    typer.echo(f"                  {response.incremental_revenue:,.0f} revenue")
+    typer.echo(f"                  {response.incremental_profit:,.0f} profit")
+    typer.echo(f"spend           : {response.promotion_spend:,.0f}")
+    roi = f"{response.roi:.2f}" if response.roi is not None else "n/a (no spend recorded)"
+    typer.echo(f"ROI             : {roi}")
+    typer.echo(f"method          : {response.method}")
+    typer.echo(f"validation      : {response.validation_status}")
+    typer.echo(f"promotions      : {response.events_analysed:,}")
+
+    if response.comparison:
+        typer.echo("")
+        typer.echo(f"{'method':<34}{'uplift':>10}  eligible")
+        for row in response.comparison:
+            mark = "yes" if row.eligible else "no"
+            typer.echo(f"{row.method:<34}{row.uplift_pct:>+10.1%}  {mark}")
+
+    if response.events:
+        typer.echo("")
+        typer.echo(f"{'promotion':<14}{'product':<10}{'store':<10}{'profit':>12}{'ROI':>8}")
+        for event in response.events[:events]:
+            event_roi = f"{event.roi:.2f}" if event.roi is not None else "-"
+            typer.echo(
+                f"{event.promotion_id:<14}{event.product_id:<10}{event.store_id:<10}"
+                f"{event.incremental_profit:>12,.0f}{event_roi:>8}"
+            )
+
+    if response.segments:
+        typer.echo("")
+        typer.echo(f"{'dimension':<16}{'segment':<16}{'uplift':>10}  action")
+        for segment in response.segments:
+            value = f"{segment.uplift_pct:+.1%}" if segment.uplift_pct is not None else "n/a"
+            typer.echo(
+                f"{segment.dimension:<16}{segment.segment:<16}{value:>10}  "
+                f"{segment.classification}"
+            )
+
+    if response.assumptions:
+        typer.echo("")
+        typer.echo("assumptions:")
+        for assumption in response.assumptions:
+            typer.echo(f"  - {assumption}")
+
+    if response.warnings:
+        typer.echo("")
+        for warning in response.warnings:
+            typer.echo(f"  ! {warning}")
+
+    # A failed validation exits non-zero even though a number was produced. A
+    # script piping this into a report should have to opt in to using an
+    # estimate whose causal assumptions did not hold.
+    raise typer.Exit(code=0 if response.is_causal else 1)
+
+
+@app.command("uplift-quality")
+def uplift_quality(
+    series: int = typer.Option(200, help="Series to sample for the check."),
+    seed: int = typer.Option(42, help="Sampling seed."),
+) -> None:
+    """Data-quality report on the causal grain.
+
+    Different questions from ``forecast-quality``. A forecasting model degrades
+    when its inputs are imperfect and the backtest shows it; a causal estimate
+    misleads instead, silently. These checks look for the problems that bias an
+    effect - missing treatment labels, overlapping promotions, censoring that
+    differs between the arms - and state the direction of each bias.
+
+    Exits non-zero on any FAIL.
+    """
+    from ml.forecasting.sampling import sample_series
+    from ml.promo_uplift.config import get_promo_uplift_config
+    from ml.promo_uplift.quality import check_panel
+
+    configure_logging()
+    repository = Container().data_repository
+    config = get_promo_uplift_config()
+
+    sample = sample_series(repository, n_series=series, seed=seed)
+    panel = _uplift_panel(repository, sample)
+
+    report = check_panel(panel, config=config)
+    typer.echo(report.render())
+    raise typer.Exit(code=0 if report.passed else 1)
+
+
+@app.command("uplift-validate")
+def uplift_validate(
+    scenario: str | None = typer.Option(
+        None, help="One scenario name. Omit to run all of them."
+    ),
+    series: int = typer.Option(150, help="Synthetic series per scenario."),
+) -> None:
+    """Recover known treatment effects from synthetic data.
+
+    The only test that can establish a causal estimator is correct. Real data
+    has no counterfactual, so a method can score perfectly on every predictive
+    metric while being wrong about the effect by any margin. Here the effect is
+    applied by hand and recorded, so recovery is checkable.
+
+    Exits non-zero if any scenario is not recovered.
+    """
+    from ml.promo_uplift.config import get_promo_uplift_config
+    from ml.promo_uplift.controls import build_control_pool
+    from ml.promo_uplift.estimators import AIPWEstimator, fit_nuisances
+    from ml.promo_uplift.features import build_covariates
+    from ml.promo_uplift.synthetic import SCENARIOS, generate, scenario_config
+    from ml.promo_uplift.treatment import build_analysis_frame
+
+    configure_logging()
+    base = get_promo_uplift_config()
+    names = [scenario] if scenario else list(SCENARIOS)
+
+    typer.echo(f"{'scenario':<18}{'true':>9}{'naive':>9}{'AIPW':>9}{'error':>9}  verdict")
+    failures = 0
+    for name in names:
+        if name not in SCENARIOS:
+            typer.echo(f"unknown scenario {name!r}; expected one of {', '.join(SCENARIOS)}")
+            raise typer.Exit(code=2)
+
+        config = scenario_config(name, base)
+        panel = generate(name, config=config, n_series=series)
+        analysis = build_analysis_frame(panel.observable(), config=config)
+        pool = build_control_pool(analysis, config=config)
+        covariates = build_covariates(
+            pool.frame, analysis.events, config=config, history=analysis.frame
+        )
+        nuisance = fit_nuisances(covariates, config=config)
+        estimate = AIPWEstimator(config=config).fit(covariates, nuisance).estimate_ate()
+
+        y, t = covariates.y, covariates.t
+        naive = y[t].mean() / y[~t].mean() - 1.0
+        error = abs(estimate.ate_pct - panel.true_att_pct)
+        ok = error <= base.synthetic.recovery_tolerance * max(
+            abs(panel.true_att_pct) / 0.15, 1.0
+        )
+        failures += not ok
+        typer.echo(
+            f"{name:<18}{panel.true_att_pct:>+9.1%}{naive:>+9.1%}"
+            f"{estimate.ate_pct:>+9.1%}{error:>9.1%}  {'PASS' if ok else 'FAIL'}"
+        )
+
+    raise typer.Exit(code=0 if failures == 0 else 1)
+
+
+def _uplift_panel(repository: Any, pairs: Any) -> Any:
+    """Sales joined to the promotion calendar, at the causal grain.
+
+    Kept out of the command body because the same join is what
+    ``scripts/estimate_uplift.py`` builds, and two copies of a join that decides
+    which rows count as treated is exactly the kind of duplication that lets
+    them drift apart.
+    """
+    from ml.promo_uplift.data import build_uplift_panel
+
+    return build_uplift_panel(repository, pairs)
 
 
 @app.command()

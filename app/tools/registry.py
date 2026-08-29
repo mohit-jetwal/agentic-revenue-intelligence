@@ -74,7 +74,9 @@ class ToolRegistry:
 
 
 def build_default_registry(
-    *, forecasting_service: object | None = None
+    *,
+    forecasting_service: object | None = None,
+    promo_uplift_service: object | None = None,
 ) -> ToolRegistry:
     """Construct the registry with the platform's analytical tools.
 
@@ -94,5 +96,10 @@ def build_default_registry(
         from app.tools.forecasting_tool import ForecastingTool
 
         registry.register(ForecastingTool(forecasting_service))  # type: ignore[arg-type]
+
+    if promo_uplift_service is not None:
+        from app.tools.promo_uplift_tool import PromoUpliftTool
+
+        registry.register(PromoUpliftTool(promo_uplift_service))  # type: ignore[arg-type]
 
     return registry

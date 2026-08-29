@@ -143,7 +143,7 @@ class HorizonDataset:
         return len(self.frame)
 
     @property
-    def X(self) -> pd.DataFrame:  # noqa: N802 - sklearn convention
+    def X(self) -> pd.DataFrame:
         return self.frame[self.feature_names]
 
     @property

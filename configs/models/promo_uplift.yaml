@@ -1,0 +1,229 @@
+# Promo uplift configuration (brief sections 6, 7, 12, 24, 27).
+#
+# Everything that defines *what effect is being estimated* lives here, not in the
+# code. That is not tidiness: the treatment definition is part of the causal
+# claim. "Uplift was +18%" means nothing without "treatment = any promotion of at
+# least 5% depth, measured over the event window plus a 10-day washout, against
+# same-listing unpromoted days within 45 days". Two analysts using different
+# definitions will disagree about the number and both be right.
+#
+# `PromoUpliftConfig.fingerprint()` hashes this file into MLflow params, so an
+# estimate can always be traced back to the definition that produced it.
+
+target: units
+grain:
+  - date
+  - product_id
+  - store_id
+
+# --- treatment definition (section 6) ----------------------------------------
+treatment:
+  # A row is treated when it falls inside a promotion event window. Note this is
+  # the whole event, price cut included - NOT just the mechanic. In the generator
+  # a promotion moves demand through two channels: the response curve
+  # a*(1-exp(-b*d)) and the price cut itself via own-price elasticity. At a 20%
+  # depth the price channel is the LARGER of the two. Defining treatment as the
+  # promotion flag alone would measure the smaller half and call it the effect.
+  min_discount_depth: 0.05
+  # Mechanics that count as treatment. Empty means all of them.
+  include_types: []
+  # A display or bundle with no price cut is still a promotion - it changes
+  # demand without changing price. Kept in.
+  require_price_reduction: false
+  # Days after the event end that carry pull-forward payback. The generator sets
+  # pull_forward_fraction 0.32 over 10 decaying days: buyers loaded their pantry
+  # and buy less afterwards. Gross uplift ignores this window; net incrementality
+  # includes it, and the difference is what separates a promotion that grew the
+  # category from one that moved sales a fortnight earlier.
+  washout_days: 10
+  # Minimum event length. A one-day price glitch is not a promotion, and its
+  # "uplift" is a single day of noise.
+  min_duration_days: 2
+
+# --- control construction (section 6, 16) ------------------------------------
+controls:
+  # Unpromoted days for the same product-store, within this many days of the
+  # event. Close in time so seasonality, price regime and competitive position
+  # are similar; not so close that the washout window contaminates them.
+  same_series_window_days: 45
+  # Also draw controls from never-treated listings in the same category and
+  # region, giving cross-sectional as well as within-series comparison.
+  use_cross_sectional_controls: true
+  # A promotion needs at least this many control observations before an estimate
+  # is attempted. Below it, refuse - see NoControlGroupError.
+  min_control_rows: 30
+  min_treated_rows: 5
+  # Days before the event used for pre-treatment covariates and the pre-trend
+  # test. 56 covers the longest trailing window the covariates use.
+  pre_period_days: 56
+
+# --- stockout handling (section 8) -------------------------------------------
+stockouts:
+  # Exclude censored rows by default. This CHANGES THE ESTIMAND - it becomes
+  # "the effect on sales among promotion-days where stock was available" - and
+  # that is stated in every result's assumptions rather than left implicit.
+  #
+  # It also introduces selection: stockouts are a *post-treatment* variable.
+  # Promotions raise demand, demand outruns the reorder policy, so treated rows
+  # censor more often than control rows. Dropping them removes the highest-demand
+  # promotion days and biases the estimate DOWN. That is why the censoring share
+  # is reported per arm and why the bracketing sensitivity below exists.
+  exclude_censored_rows: true
+  # Warn when the treated arm loses noticeably more rows than the control arm.
+  # A gap this size means the selection is differential, not incidental.
+  differential_censoring_warn_pp: 0.05
+  # Re-run with censored outcomes held at the availability cap - a lower bound
+  # on the demand that existed - to bracket how much the exclusion moved things.
+  bracketing_sensitivity: true
+
+# --- propensity and overlap (sections 12, 22) --------------------------------
+propensity:
+  model: logistic
+  # Trim propensities to this range. A propensity of 0.001 gives one observation
+  # an IPW weight of 1000; the "estimate" is then that row's outcome with extra
+  # steps. Trimming is a bias/variance trade, and the trimmed share is reported.
+  clip: [0.02, 0.98]
+  # Refuse the estimate if trimming would discard more than this share. Past it,
+  # the treated and control groups genuinely do not overlap and no weighting
+  # scheme rescues that.
+  max_trimmed_share: 0.10
+  # Cap control weights at this percentile. e/(1-e) diverges as e approaches 1:
+  # a control row scored 0.98 gets weight 49 while the 99th percentile of
+  # weights is below 1, so a handful of rows become the entire weighted control
+  # mean. Measured on the confounded synthetic panel this overshot balance from
+  # +0.27 to -0.38 - worse, in the opposite direction. Set to null to disable.
+  stabilise_weights_at: 99.0
+  # Post-weighting standardised mean difference threshold. The 0.1 convention is
+  # from the matching literature; above it, the arms are still unbalanced on a
+  # covariate and the adjustment has not done its job.
+  max_standardised_difference: 0.10
+  # Effective sample size floor, as a fraction of rows. Weights concentrated on
+  # a handful of observations produce an estimate with far less information than
+  # the row count suggests.
+  min_effective_sample_fraction: 0.30
+
+# --- estimators (section 11) --------------------------------------------------
+estimators:
+  # The wrong answer, kept deliberately. Reporting it next to the others is what
+  # demonstrates the size of the bias rather than asserting it.
+  naive_during_vs_before: true
+  # Reuses Step 5's fitted baseline (PromotionApproach.EXCLUDE), which has never
+  # seen a promotional row - so its prediction *is* the no-promotion expectation.
+  baseline_counterfactual: true
+  # Implemented WITH a pre-trend test that can reject it. The generator targets
+  # promotion timing at seasonal peaks, so parallel trends may well fail here;
+  # if it does, that is reported, not worked around.
+  difference_in_differences: true
+  inverse_probability_weighting: true
+  # The headline. Consistent if EITHER the outcome model or the propensity model
+  # is right - not both.
+  augmented_ipw: true
+  # CATE, for segment-level uplift and for Step 8's allocation.
+  dr_learner: true
+
+outcome_model:
+  # Poisson objective, NOT a log transform of the target.
+  #
+  # Both assume multiplicative structure, which is right - the data-generating
+  # process is log-additive, so every demand driver composes multiplicatively.
+  # The difference is what comes back out. A Poisson objective returns the
+  # conditional MEAN on the units scale, which is the scale the AIPW residuals
+  # (y - mu0) are taken on. Fitting log1p(y) and inverting returns a
+  # median-like quantity biased low by an amount that varies with residual
+  # variance - so the bias does not cancel between the treated and control arms
+  # and lands directly in the effect. Step 6 hit exactly this.
+  transform: poisson
+  estimator: lightgbm
+  n_estimators: 300
+  learning_rate: 0.05
+  num_leaves: 31
+  min_child_samples: 50
+  seed: 42
+
+cross_fitting:
+  # Nuisance models are fitted out-of-fold: predictions for a row come from a
+  # model that never saw it. Without this the residuals are optimistically small
+  # and the influence-function standard error is too narrow.
+  n_folds: 5
+  # Hold out whole product-store listings, so no part of a promotion informs its
+  # own counterfactual and serial correlation within a listing is respected.
+  # This also matches the bootstrap's resampling unit.
+  #
+  # `time_blocks` - contiguous date ranges - is available and is the tempting
+  # choice, because it is what a forecasting split would do. It is wrong here.
+  # Every fold would then be predicted by a model trained on *other* periods, so
+  # any covariate with a time trend gets extrapolated. Measured on the synthetic
+  # panel it drove propensity scores to the clip boundaries and returned -424%
+  # against a true +65%. Use it only if the window spans a real regime change.
+  scheme: series
+
+# --- uncertainty (section 21) -------------------------------------------------
+uncertainty:
+  # 95% intervals. Analytic where the estimator has an influence function (IPW,
+  # AIPW), bootstrap otherwise. Where neither is available the interval is
+  # omitted - never fabricated.
+  alpha: 0.05
+  bootstrap_samples: 200
+  # Resample whole product-store series, not rows. Rows within a series are
+  # serially correlated, so a row bootstrap treats one series as many independent
+  # observations and produces intervals several times too narrow.
+  bootstrap_unit: series
+  seed: 42
+
+# --- validation (sections 22, 23, 24) -----------------------------------------
+validation:
+  # Pretend the promotion started this many days earlier than it did, in a window
+  # with no real treatment. A large "effect" there means the method is detecting
+  # something other than the promotion, and the estimate is not trustworthy.
+  placebo_shift_days: 30
+  # Above this, the placebo result invalidates the run.
+  placebo_max_abs_effect: 0.05
+  # p-value below which pre-treatment trends are judged non-parallel. Failing
+  # this does not stop the run - it disqualifies DiD specifically, and that is
+  # reported in the comparison table.
+  parallel_trends_alpha: 0.05
+  # Sensitivity analysis: re-estimate with each of these varied and report the
+  # spread. An estimate that swings wildly is not a finding, whatever its
+  # confidence interval says.
+  sensitivity_washout_days: [0, 5, 10, 21]
+  sensitivity_control_windows: [21, 45, 90]
+  sensitivity_trim_levels: [0.01, 0.02, 0.05]
+  # Chronological folds for out-of-time stability.
+  stability_folds: 3
+
+# --- business metrics (section 18) --------------------------------------------
+business:
+  # Margin comes from the sales fact (revenue - cost) rather than a configured
+  # constant, so it reflects the actual price paid on each day including the
+  # promotional discount. A fixed margin would overstate profit on deep
+  # discounts, which is exactly where the ROI question bites.
+  margin_source: sales_fact
+  # Fallback only when cost is missing.
+  default_gross_margin: 0.30
+  # Below this, a promotion destroyed value even with positive uplift. Not a
+  # filter - a label.
+  roi_break_even: 1.0
+
+# --- sampling (section 35) ----------------------------------------------------
+sampling:
+  # Product-store pairs for a development run. The full panel is opt-in; see
+  # ml/forecasting/sampling.py for the pair-sampling machinery this reuses.
+  n_series: 400
+  stratify_by_volume: true
+  seed: 42
+  # Cap on promotion events analysed in one run. Beyond this the report stops
+  # being readable and the runtime stops being interactive.
+  max_events: 2000
+
+# --- synthetic validation (section 32) ----------------------------------------
+synthetic:
+  # The exact-truth generator. Unlike the platform dataset, every parameter here
+  # is known, so a recovered estimate can be compared against a number rather
+  # than against a plausibility judgement.
+  n_series: 200
+  n_days: 365
+  seed: 42
+  # Tolerance for "recovered the known effect", in absolute uplift terms. Chosen
+  # against the estimator's own standard error rather than as a round number -
+  # see tests/promo_uplift/test_synthetic_effect.py.
+  recovery_tolerance: 0.03

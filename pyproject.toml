@@ -99,13 +99,17 @@ ignore = [
 # convention. Renaming them to satisfy pep8-naming would make this code read as
 # non-standard to anyone who has used sklearn, which is a worse outcome than the
 # lint. Scoped to the modules that actually follow the convention.
-"ml/**" = ["N803", "N806"]
+#
+# N802 joins the list for the same reason: `CovariateFrame.X` is the accessor
+# for the design matrix, and `covariates.x` would read as a coordinate.
+"ml/**" = ["N802", "N803", "N806"]
 # The handbook generators are almost entirely prose and diagram coordinates.
 # Wrapping the string literals to 100 columns would break sentences across lines
 # and make the source harder to edit than the document it produces.
 "docs/**" = ["E501"]
 "tests/models/**" = ["S101", "N803", "N806"]
 "tests/forecasting/**" = ["S101", "N803", "N806"]
+"tests/promo_uplift/**" = ["S101", "N803", "N806"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -134,6 +138,11 @@ markers = [
     "statistical: relationship-recovery tests; slower, fit regressions on generated data",
     "features: feature engineering and feature repository tests",
     "leakage: point-in-time correctness; the property Steps 4-11 depend on",
+    # Distinct from `models` because these test a different property. A model
+    # test asks whether predictions are accurate; a causal test asks whether an
+    # estimated *effect* is right, which no amount of predictive accuracy
+    # establishes and which only known-truth data can answer.
+    "causal: recovery of known treatment effects, placebo and confounding tests",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
 

@@ -36,6 +36,7 @@ from app.services.model_registry import (
     MLflowModelRegistry,
     ModelRegistry,
 )
+from app.services.promo_uplift_service import PromoUpliftService
 from app.tools.registry import ToolRegistry, build_default_registry
 from data.repositories.base import DataRepository
 from data.repositories.databricks import DatabricksDataRepository
@@ -140,6 +141,17 @@ class Container:
         """
         return ForecastingService(self.data_repository, settings=self.settings)
 
+    @cached_property
+    def promo_uplift_service(self) -> PromoUpliftService:
+        """Promotional uplift (Step 7).
+
+        Environment-independent for the same reason as the two above. Lazy for a
+        sharper reason: this service serves a *completed analysis*, and on a
+        clean checkout none exists. Loading eagerly would make container startup
+        depend on someone having run a causal study.
+        """
+        return PromoUpliftService(self.data_repository, settings=self.settings)
+
     # -- retrieval ----------------------------------------------------------
 
     @cached_property
@@ -188,7 +200,10 @@ class Container:
         building the registry never loads a model - a missing artifact must not
         make container startup fail.
         """
-        return build_default_registry(forecasting_service=self.forecasting_service)
+        return build_default_registry(
+            forecasting_service=self.forecasting_service,
+            promo_uplift_service=self.promo_uplift_service,
+        )
 
     # -- per-request objects ------------------------------------------------
 
