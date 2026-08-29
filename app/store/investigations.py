@@ -73,7 +73,13 @@ class InvestigationStore:
 
     @contextmanager
     def session(self) -> Iterator[Session]:
-        assert self._sessions is not None
+        # Raised rather than asserted: an `assert` vanishes under `python -O`,
+        # and the failure it would have caught becomes a `NoneType is not
+        # callable` on the next line instead.
+        if self._sessions is None:
+            raise RuntimeError(
+                "InvestigationStore was not initialised; __post_init__ did not run"
+            )
         session = self._sessions()
         try:
             yield session

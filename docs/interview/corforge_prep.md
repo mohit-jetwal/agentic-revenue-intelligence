@@ -8,72 +8,101 @@ Interview preparation. Read Part 1 before anything else.
 
 ## The situation
 
-The repository is at **Step 7 of a 23-step roadmap**. That is real, substantial,
-senior-level work — but it is not the finished agentic platform your CV bullet
-describes.
+**Stage 1 is complete — all 15 steps.** The roadmap was compressed from 23 steps
+to 15 partway through; the compression merged analytical capabilities and
+prioritised the agent layer, and it is worth saying so if asked, because
+"I re-scoped when the pace made the deadline unrealistic" is a Principal-level
+answer.
 
-| Built and working | Designed, scaffolded, not implemented |
+You can now demonstrate the thing the CV describes. It runs.
+
+| Built, tested, measured | Honestly still absent |
 |---|---|
-| Synthetic data platform with hidden ground truth | LangGraph graph, edges, checkpointing |
-| Point-in-time-correct feature layer | Supervisor / Root-Cause / Critic / Recommendation agents |
-| Baseline Sales model | Claude integration (`app/llm/claude.py` is a documented skeleton) |
-| Demand Forecasting (XGBoost, conformal intervals) | Agentic RAG (vector store is a stub) |
-| **Promo Uplift (causal: AIPW, DR-learner)** | Agent evaluation harness |
-| `ToolResult` envelope + `AnalyticalTool` base | Trade-promo optimisation, elasticity, price optimisation |
-| Two registered agent tools | Databricks (design documents only) |
-| Prompt registry with versioned files | HITL approval flow |
-| Budget guardrail, trace IDs, structured logging | Streamlit UI |
-| FastAPI skeleton | |
+| Synthetic data platform with hidden ground truth | Databricks (design documents only) |
+| Point-in-time-correct feature layer | Agentic RAG (`VectorStore` is an interface, no corpus) |
+| Baseline Sales · Demand Forecasting (conformal intervals) | Azure anything |
+| **Promo Uplift (causal: AIPW, DR-learner, cross-fitting)** | Neo4j, MCP, LangSmith, OpenTelemetry |
+| Own- and cross-price elasticity (panel FE, 2SLS diagnostics) | Async job queue (investigations run synchronously) |
+| Trade-promo allocation · price optimisation · scenario engine | Unity Catalog model listing (`GET /models` 501s there) |
+| Claude provider + deterministic offline stub | |
+| **LangGraph plan/act/observe/critique loop** | |
+| Critic, bounded re-planning, HITL interrupt | |
+| Output validation: every numeral checked against tool results | |
+| Golden-set agent evaluation with a committed baseline | |
+| FastAPI (all endpoints live), SQLite app state, Streamlit UI | |
+| **1,013 tests passing**; ruff, mypy, bandit clean | |
 
-**The prompt files exist but say "Placeholder" in their second line.** If the
-interviewer opens `prompts/supervisor/v1.md` — and a Principal candidate should
-expect their repo to be opened — that is what they see.
+Dockerfile and compose are **written but never built** — Docker is not installed
+on the development machine. The lockfile is verified to resolve against the base
+image and the compose file parses, but say "written, unproven" if it comes up.
+Claiming a green build you have not seen is the one thing on this page that
+would actually cost you the room.
 
-## Why the honest version is the stronger interview
+Six tools are registered. The prompt files contain real prompts. The 501 stubs
+are gone except one, and that one is honest.
 
-Three reasons, and they are practical rather than moral.
+## Where the story has moved
 
-**It survives a drill-down.** "Show me the state schema" has a great answer if
-you designed one and a terrible answer if you claimed one you don't have. A
-Principal interview *is* a drill-down.
+The old positioning was "I built the tool layer first, deliberately". That is
+still true and still the right sequencing argument — but it is now a story about
+*why the finished thing is shaped this way*, not an explanation for something
+missing.
 
-**The gap itself is the senior story.** "I built the tool layer and the contracts
-first, deliberately, because an agent calling an unreliable tool is worse than no
-agent" is an architectural argument. Most candidates have the opposite problem —
-a LangGraph demo with no defensible numbers underneath.
+The differentiators, in order:
 
 **The causal work is genuinely rare.** Most people applying for AI Lead roles
 have RAG chatbots. Very few can explain why conditioning on discount would have
 reported +17.7% instead of +71.3%, or why their confidence intervals were three
-times too narrow until they clustered the standard errors. That is your
-differentiator and it is completely true.
+times too narrow until they clustered the standard errors.
+
+**The hallucination control is architectural, not prompted.** Every numeral in
+every recommendation is extracted and checked against the tool results in state.
+A prompt instruction with no check behind it is a hope.
+
+**The evaluation has a floor.** The golden set is scored against a deliberately
+weak keyword planner, and the honest finding is that **keyword matching ties a
+language model on tool selection** for well-posed questions. The LLM earns its
+place on abstention and on the trap case. Almost nobody brings a benchmark that
+makes their own system look unnecessary in one column.
+
+**The system knows what it cannot answer.** Nine of twenty golden questions are
+unanswerable with the registered tools, and they are scored on whether the agent
+*declines*. That is the dimension most benchmarks omit.
 
 ## The sentence to use
 
-> "It's a 23-step build. I'm at step 7 — the deterministic tool layer and the
-> contracts the agent layer consumes are done and validated; the LangGraph
-> orchestration is designed and scaffolded but not yet implemented. I sequenced
-> it that way on purpose: an agent that calls a tool returning a wrong number
-> just launders that error into a business recommendation with a confident tone
-> on top."
+> "It's a working agentic platform: Claude and LangGraph do the reasoning —
+> what to investigate, in what order, when the evidence is sufficient — and
+> deterministic models produce every number. The LLM never calculates. I built
+> the tool layer and its contracts first, on purpose: an agent that calls a tool
+> returning a wrong number just launders that error into a business
+> recommendation with a confident tone on top."
 
-Then, if pressed on the CV bullet:
+Then, if asked what is missing:
 
-> "The CV describes the platform's target architecture, which I've designed end
-> to end. What's running today is steps 1 through 7. I'd rather walk you through
-> what I've actually measured than what I intend to build."
+> "It's Stage 1 — local, single-process, synchronous. Stage 2 is the Databricks
+> migration, and that's designed rather than built. And I'd tell you the golden
+> set says a keyword planner matches the LLM on tool selection for well-posed
+> questions — the model earns its place on knowing when to decline, not on
+> routing."
 
-That answer lands well. It reads as someone who ships and knows the difference.
+That second answer is the one that lands. Volunteering a result that
+undercuts your own system reads as someone who measures things.
 
 ## What you must not do
 
-- Do not describe running a LangGraph investigation. There isn't one.
-- Do not quote agent evaluation metrics. None exist.
 - Do not claim Azure anything. The project uses Anthropic Claude and is
   Databricks-targeted. There is no Azure in it.
 - Do not claim Neo4j, MCP, LangSmith or OpenTelemetry. None are present.
+- Do not claim agentic RAG. `VectorStore` is an interface with no document
+  corpus behind it — it would be scaffolding for its own sake.
+- Do not quote a Claude golden-set score. Only the stub baseline is committed;
+  a Claude run costs money and has not been recorded.
+- Do not say the Docker image has been run. It is written and the lockfile
+  resolves for its base image, but Docker is not installed on the dev machine,
+  so it has never been built. Say that if asked.
 
-For each of those, Part 4 Section F gives you a real answer.
+For the first two, Part 4 Section F gives you a real answer.
 
 ---
 
@@ -92,11 +121,12 @@ Memorise the shape, not the words.
 > deterministic models produce *every number*. The LLM never calculates. That
 > separation is the core architectural commitment.
 >
-> **What I've built.** Seven of twenty-three steps. A synthetic CPG dataset whose
-> generator records the true relationships in a directory the application
-> physically cannot read, so every model can be scored against known truth. A
-> point-in-time-correct feature layer. Then three models: baseline sales, demand
-> forecasting, and promotional uplift.
+> **What I built.** A synthetic CPG dataset whose generator records the true
+> relationships in a directory the application physically cannot read, so every
+> model is scored against known truth. A point-in-time-correct feature layer.
+> Six analytical models behind six agent tools. Then the agent layer on top: a
+> LangGraph plan/act/observe loop, a separate Critic that can send it back to
+> re-plan, and a recommendation step where every number is verified.
 >
 > **The hardest one.** Promo uplift is causal, not predictive. You're estimating
 > what *would* have happened without the promotion — a quantity that is absent
@@ -106,10 +136,16 @@ Memorise the shape, not the words.
 > against the generator's own recorded parameters across 4,417 promotion events:
 > expected +71.3%, estimated +72.0%. Error of 0.7 percentage points.
 >
-> **What's next.** Steps 13 to 20 are the agent layer — tool interfaces are done,
-> the Claude provider and LangGraph graph are designed and scaffolded. The tool
-> contract is already in place so agents plug into a stable envelope rather than
-> the models directly.
+> **The control I'd point at.** Every numeral in a final recommendation is
+> extracted and matched against the tool results in state. Not a prompt asking
+> the model to behave — a check. It reports rather than blocks, because
+> legitimate arithmetic over sourced values exists and a check that fires on it
+> would get switched off.
+>
+> **How I know it works.** A golden set of twenty questions derived from the
+> scenarios the generator injected, so the right answer exists independently of
+> the thing being graded. Nine of them the platform *cannot* answer, and those
+> are scored on whether it declines.
 
 Stop there. Let them pick the thread.
 
@@ -121,28 +157,41 @@ Stop there. Let them pick the thread.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  AGENT LAYER          Supervisor · Root-Cause · Critic    │  ← designed,
-│                       · Recommendation (LangGraph)        │    not built
+│  INTERFACE            FastAPI · Streamlit · CLI           │
+│                       one InvestigationService behind all │
 ├──────────────────────────────────────────────────────────┤
-│  TOOL CONTRACT        AnalyticalTool → ToolResult         │  ← BUILT
+│  GUARDRAILS           budget · output validation          │
+│                       HITL interrupt · approval threshold │
+├──────────────────────────────────────────────────────────┤
+│  AGENT LAYER          Supervisor · Critic · Recommendation│
+│                       LangGraph: plan→act→observe→critique│
+│                       └─ bounded re-plan cycle            │
+├──────────────────────────────────────────────────────────┤
+│  TOOL CONTRACT        AnalyticalTool → ToolResult         │
 │                       status · provenance · confidence    │
 │                       · assumptions · warnings · trace_id │
 ├──────────────────────────────────────────────────────────┤
-│  SERVICE LAYER        BaselineService · ForecastingService│  ← BUILT
-│                       · PromoUpliftService                │
+│  SERVICE LAYER        Baseline · Forecasting · Uplift     │
+│                       · Elasticity · Optimization         │
 ├──────────────────────────────────────────────────────────┤
-│  MODEL LAYER          baseline · forecasting · uplift     │  ← BUILT
-│                       (+ 5 more designed)                 │
+│  MODEL LAYER          baseline · forecasting · uplift     │
+│                       · elasticity · optimisation ·       │
+│                       scenario                            │
 ├──────────────────────────────────────────────────────────┤
-│  FEATURE LAYER        FeatureEngineer, availability       │  ← BUILT
+│  FEATURE LAYER        FeatureEngineer, availability       │
 │                       classes, PointInTimeView            │
 ├──────────────────────────────────────────────────────────┤
-│  DATA ACCESS          DataRepository (ABC)                │  ← BUILT
+│  DATA ACCESS          DataRepository (ABC)                │
 │                       DuckDB local │ Databricks prod      │
 ├──────────────────────────────────────────────────────────┤
-│  STORAGE              Parquet gold tables                 │  ← BUILT
+│  STORAGE              Parquet gold tables (analytics)     │
+│                       SQLite (investigations, traces)     │
 └──────────────────────────────────────────────────────────┘
 ```
+
+**The one-sentence version of the arrow direction:** reasoning flows down,
+numbers flow up, and nothing in the top three layers is allowed to compute a
+figure the bottom five did not produce.
 
 ## The three seams (Step 1)
 
@@ -389,12 +438,141 @@ real protection is an allow-list.
   profit.
 - **DiD passed its pre-trend test (p=0.64) and was still 21 points out.**
 
+## Steps 8–9 — Elasticity and optimisation
+
+**Elasticity** is log-log panel regression with product and store-time fixed
+effects, which is the *correctly specified* model by construction — the
+generator builds demand log-additively, so this is not a modelling guess. Four
+estimators are implemented; two (`naive_ols`, `iv_2sls`) are computed but marked
+not-selectable, so the agent can quantify the bias it avoided rather than assert
+one exists.
+
+Have this ready: **2SLS failed despite a median first-stage F of 484.** The
+commodity cost index varies only at category×date, so it has no cross-sectional
+variation to identify with. A strong F statistic is not sufficient for a valid
+instrument, and the diagnostic that catches it checks for zero cross-sectional
+variation directly.
+
+**Optimisation** allocates a trade budget across candidate promotions by
+incremental profit, subject to constraints, with diminishing returns modelled so
+the budget spreads rather than pouring into one cell. Infeasibility is returned
+as a *finding* — "your minimum spends already exceed the budget" — not an error.
+
+Two bugs worth telling:
+
+- The price grid was ±15%. The optimum for an elasticity of −2 is +20%, so
+  **every recommendation pinned to the grid edge** and looked like a
+  recommendation rather than a boundary artefact. Widened to ±30% with an
+  explicit warning when the answer still lands on the edge.
+- A constraint matching no candidate was silently dropped **and then reported as
+  binding** — the worst combination, because it claimed to have constrained
+  something it had never seen.
+
+## Steps 10–12 — The agent layer
+
+**Structured output via forced tool-calling**, not JSON parsing. The target
+Pydantic model's JSON schema becomes a single tool's input schema and the model
+is forced to call it. Materially more reliable than asking for JSON and hoping.
+
+**A deterministic offline stub provider** implements the same ABC. Every agent
+test, CI run and the golden-set evaluation go through it: no key, no network, no
+cost, same answer every time. A suite that costs money per run gets run less
+often, and a non-deterministic one produces failures nobody can reproduce.
+
+**The Critic is a separate agent** because one that plans an investigation and
+judges its own investigation will usually find that it succeeded. Mechanical
+checks run first at no token cost; a result carrying `validation_status: failed`
+is marked BLOCKING and overrides whatever the model concludes.
+
+**Re-planning is bounded twice**, by `max_replans` and by the budget. A Critic
+that is never satisfied is the realistic way an agent loops forever — so the cap
+ends it, and the unresolved objection travels into the recommendation's risks
+and caps its confidence at 0.5 rather than arriving looking settled.
+
+**Output validation** is the answer to "how do you stop it inventing numbers",
+and it is worth being specific about the two bugs found by running it:
+
+- The numeral regex **missed "1.43M" entirely.** The bare number is 1.43, which
+  falls under the structural floor that skips years and small counts — so the
+  commonest way of writing a large figure was never checked at all. The
+  hallucination control had a hole in exactly the case it exists for.
+- Exempting suffixes and percentages then flagged **"95% confidence interval"**
+  as an invented figure. Confidence levels are now scoped out by value *and*
+  surrounding words together.
+
+## Step 13 — Agent evaluation (lead with this one)
+
+Twenty questions **derived from** the scenarios Step 2 injected, not written by
+hand. That record is the only place a right answer exists independently of the
+thing being graded.
+
+Four dimensions, never averaged into one: tool selection (with a fan-out
+penalty), evidence, direction, abstention. An agent that selects perfectly and
+then writes an unsupported conclusion should not score the same as one that
+picks badly and reports honestly.
+
+**The floor is a keyword planner.** A stub run grades whatever the stub was
+scripted to return — script the right answer and the score measures the person
+who wrote the script. Scripting a deliberately weak policy instead makes the
+number real.
+
+| | keyword floor |
+|---|---|
+| answerable mean | 0.833 |
+| abstention mean | **0.000** |
+| tool selection | 1.000 |
+| direction | 0.773 |
+
+**Say the uncomfortable row out loud.** Keyword routing matches a language model
+on tool selection for well-posed single-capability questions. The LLM earns its
+place on abstention — where the floor scores zero, because knowing your own
+coverage takes judgement — and on the `bad_promo` trap, where uplift is genuinely
+positive and the right answer is still *don't repeat it*.
+
+Two scorer bugs found by running it, both of which measured the wrong thing:
+
+- Scoring direction on incremental **profit** graded Step 7's known spend
+  artefact rather than the agent. Spend runs ~20× achievable margin at this
+  grain, so profit is negative even for promotions injected as successful, and
+  all three scored zero. The scenario record fixes the *volume* sign.
+- Scoring the trap from the tool's ROI field graded Step 7 again. The decision
+  *not to repeat* exists only in the recommendation, so that is where it is read
+  from.
+
+The report also separates **artefact gaps** — a required tool that ran and found
+no trained series for that product — from planning errors. Different failures,
+different fixes.
+
+## Steps 14–15 — Interface and packaging
+
+One `InvestigationService` behind the CLI, API and UI, so a question answered in
+the terminal is answered identically over HTTP. The Streamlit UI talks HTTP
+rather than importing the container: the shortcut would make it a second
+consumer of the internals, and an endpoint could break without the demo noticing.
+
+Three decisions worth defending:
+
+- **An investigation that gathered no usable evidence is `failed`, not
+  `completed`** — even though the graph ran to the end without raising.
+  Reporting an empty result as complete is how "we found nothing" becomes
+  "there is no effect".
+- **A failed investigation returns 200 with a `failed` status**, not a 5xx. The
+  request was handled correctly. That distinction lets a caller tell "the
+  platform is down" from "the evidence did not support an answer".
+- `POST /scenario` **reports the levers it could not model** rather than dropping
+  them. A projection that silently ignored the inventory change the caller asked
+  about would answer a different question than the one posed.
+
+One bug worth telling: the service minted a `trace_id`, stored it, then let the
+graph mint a different one — so the stored trace and the returned outcome could
+not be joined. A silent failure, because both ids look perfectly valid.
+
 ## Engineering discipline
 
 | | |
 |---|---|
-| Tests | 777 total, 175 for uplift alone |
-| Gates | ruff, mypy (strict, 152 files), bandit — all clean |
+| Tests | 1,013 total, 175 for uplift alone |
+| Gates | ruff, mypy (strict, 183 files), bandit — all clean |
 | Config | YAML → Pydantic, hashed into MLflow params |
 | Logging | structlog, JSON, trace IDs, never business data at INFO |
 | Determinism | seeded RNG streams per generator |
@@ -457,17 +635,19 @@ a mediocre one, and you'll waste months chasing error that isn't there.
 
 ## Section B — Agentic design (9–18)
 
-*Answer these as design, stated as design. That's legitimate and expected for
-work in progress.*
+*These are all built. Answer them in the present tense and offer to show the
+code — the repo will be opened.*
 
 **9. How is the multi-agent system designed?**
-Four agents, deliberately not one per model. **Supervisor** — intent, planning,
-tool selection, re-planning. **Root-Cause** — hypothesis generation and evidence
-interpretation. **Critic** — validation, contradiction detection, sufficiency.
-**Recommendation** — synthesis and final business output. The eight analytical
-models are *tools*, not agents, because they're deterministic; wrapping each in
-an LLM would add a non-deterministic layer in front of a deterministic
-computation and buy nothing but latency and tokens.
+Three agents in the graph, deliberately not one per model. **Supervisor** —
+intent, entity extraction, planning, tool selection, re-planning. **Critic** —
+validation, contradiction detection, sufficiency. **Recommendation** — synthesis
+and final business output. (Root-Cause was designed as a fourth and folded into
+the Supervisor's observe step; a separate agent that only interprets results
+already in state was a node boundary without a job.) The six analytical models
+are *tools*, not agents, because they're deterministic; wrapping each in an LLM
+would add a non-deterministic layer in front of a deterministic computation and
+buy nothing but latency and tokens.
 
 **10. Why LangGraph rather than a chain or plain function calling?**
 The workflow has cycles. Plan → Act → Observe → Re-plan is a loop with a
@@ -495,27 +675,46 @@ attached to each result, and returns a structured verdict: sufficient / needs
 more evidence / contradictory. If evidence is thin it names *what* is missing so
 the Supervisor can re-plan a specific step rather than retrying blindly.
 
-**14. How would you do human-in-the-loop?**
-LangGraph interrupt-before on the nodes that produce an outward-facing
-recommendation. The graph checkpoints, a human sees the plan or the draft
-recommendation with its evidence and assumptions, and approves, edits or rejects.
-Approval is recorded against the trace id so the decision is auditable.
+**14. How does human-in-the-loop work?**
+`interrupt_before` on the recommendation node, with a checkpointer so the graph
+can persist and resume. Interrupt *before*, not after: the point is to review the
+evidence, not to rubber-stamp a conclusion already drafted. It fires when the
+projected impact crosses `AGENT__HUMAN_APPROVAL_THRESHOLD`, applied to the
+*magnitude* — recommending you give up ₹1M is exactly as consequential as
+recommending you chase it. Without a checkpointer the flag is still set but
+nothing blocks on it, and I'd be explicit that this is the difference between
+"flagged for approval" and "gated on it".
 
 **15. How do you stop the LLM inventing numbers?**
-Four layers. The system prompt forbids stating any number that didn't come from a
-tool result. Structured outputs via forced tool-calling constrain the shape.
-Post-hoc validation checks every numeral in the output against the tool results
-in state. And the tools themselves refuse rather than guess — the uplift service
-returns a structured refusal with a `recoverable` flag instead of a number when
-the causal assumptions fail.
+Four layers, and only one of them is a prompt. The system prompt forbids stating
+any number that didn't come from a tool result. Structured outputs via forced
+tool-calling constrain the shape. **Post-hoc validation extracts every numeral
+in the recommendation and matches it against the tool results in state** —
+allowing the rounding a readable sentence applies, so 1,427,355 written as
+"1.43M" passes. And the tools refuse rather than guess.
 
-**16. How would you evaluate the agent?**
-Two levels. Component: does the Supervisor select the right tools for a known
-question, does the Critic catch a planted contradiction. End-to-end: a golden set
-of questions seeded from the generator's injected scenarios — the data has
-labelled events like "successful promo", "bad promo", "competitor price cut", so
-I know the correct root cause and can score whether the agent found it. That's
-the payoff of building the data platform first.
+It reports rather than blocks, for three reasons: legitimate non-tool numbers
+exist (a year, a horizon, "the top 3"); arithmetic over sourced values is real
+and not separable from invention without the reasoning the check doesn't have;
+and a labelled figure tells a reviewer where to look where a suppressed sentence
+tells them nothing. An unsourced figure caps confidence at 0.6 and is named in
+the output.
+
+**16. How do you evaluate the agent?**
+A golden set of twenty questions **derived from** the scenarios the generator
+injected — the labelled events are "successful promo", "bad promo", "stockout",
+"competitor price cut", so the correct answer exists independently of the thing
+being graded. That's the payoff of building the data platform first.
+
+Four dimensions scored separately: tool selection, evidence, direction,
+abstention. Nine of the twenty are questions the registered tools *cannot*
+answer, and those are scored on whether the agent declines — confidence is the
+failure there.
+
+The part worth volunteering: the baseline is a deliberately weak keyword planner,
+and it **ties the language model on tool selection** for well-posed questions. A
+stub run otherwise grades whatever you scripted it to return, which measures the
+person who wrote the script.
 
 **17. How do you version prompts?**
 `prompts/` with a registry and versioned files — `supervisor/v1.md`,
@@ -789,13 +988,22 @@ because that's what makes prompt changes safe to ship.
 2. **+34.9% of pure fiction** — the naive method on promotions that did nothing.
 3. **0.7 percentage points** — ground-truth recovery across 4,417 events.
 4. **The −424% story** — shows you debug rather than accept.
-5. **"I'm at step 7 of 23"** — say it early, say it plainly, then show what
-   works.
+5. **"A keyword planner ties the LLM on tool selection"** — volunteer the result
+   that undercuts your own system. It is the single most senior thing you can
+   say, and it is true.
 
 ## The tone that wins a Principal interview
 
 Volunteer your limitations before you're asked. Say "the ROI numbers on this
 dataset aren't interpretable and here's why" before they find it. Say "ignorability
 holds here because the generator's targeting is observable — that's a property of
-the data, not an achievement." Senior engineers are trusted because they mark
-their own work honestly, and almost nobody does it in interviews.
+the data, not an achievement." Say "the Docker image is written but I've never
+built it — Docker isn't installed on my machine." Senior engineers are trusted
+because they mark their own work honestly, and almost nobody does it in
+interviews.
+
+The trap to avoid now that everything is built: the old version of this document
+had you *underclaim*, and that was the right call then. It isn't now. Describe
+the system in the present tense, then be precise about the edges — Stage 2 is
+designed rather than built, agentic RAG deliberately isn't there, and the
+evaluation says the model earns its place on judgement rather than on routing.

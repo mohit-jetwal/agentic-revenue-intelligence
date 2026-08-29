@@ -3,16 +3,25 @@
 Each tool wraps one deterministic model behind the contract in
 ``app.schemas.tool_contract``, enforced by ``app.tools.base.AnalyticalTool``.
 
-Planned tools (registered in Stage 1 Step 13, once Steps 4-11 supply the models):
+Registered tools:
 
-* ``baseline_sales``            - expected sales absent promotions/anomalies
-* ``forecast_demand``           - 7/14/30/90-day demand forecast
-* ``promo_uplift``              - incremental sales caused by a promotion
-* ``trade_promo_optimization``  - budget allocation under constraints
-* ``price_elasticity``          - own-price elasticity
-* ``cross_price_elasticity``    - substitutes, complements, cannibalisation
-* ``price_optimization``        - recommended price and its defensible range
-* ``scenario_simulation``       - composed what-if projection
+* ``forecast_demand``            - 7/14/28/30/90-day demand forecast
+* ``estimate_promo_uplift``      - incremental sales *caused* by a promotion
+* ``estimate_price_elasticity``  - own-price elasticity, plus substitutes and
+                                   complements for cannibalisation questions
+* ``allocate_promotion_budget``  - budget allocation under constraints
+* ``optimize_price``             - recommended price and its defensible range
+* ``simulate_scenario``          - composed what-if projection
+
+``baseline_sales`` is deliberately not registered. It answers "what would normal
+sales have been", which is an input to uplift rather than a question anyone
+asks - exposing it would invite an agent to compute uplift itself by
+subtraction, which is the naive estimate the whole causal layer exists to avoid.
+
+Cross-price elasticity is reached through ``estimate_price_elasticity`` rather
+than as its own tool: a substitute matters when you are pricing something, and a
+separate tool would let an agent ask about cannibalisation without ever
+establishing the own-price effect it is relative to.
 
 Agents receive tool *names* and structured results. They never see a DataFrame,
 a model object, a file path or a database connection.

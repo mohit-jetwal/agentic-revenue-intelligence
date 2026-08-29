@@ -16,15 +16,13 @@ The graph shape the brief asks for (sections 5 and 18)::
          |                    |
       evaluate --------------- + insufficient evidence
          |
-      root_cause (conditional: only for explanatory questions)
-         |
       critic
          |
-      +--+-- invalid --> re-plan
+      +--+-- invalid --> re-plan (bounded by max_replans)
       |
-    recommend
+    recommend  <-- interrupt_before, when a checkpointer is supplied
          |
-      human_approval (interrupt, only above the impact threshold)
+      finish
 
 Two properties this layer is responsible for:
 
@@ -36,6 +34,6 @@ looks impressive in a demo and is wrong.
 *Bounded loops.* Every path back to ``plan`` passes through the budget check.
 An agent that can re-plan is an agent that can loop forever, and the Critic
 returning "insufficient evidence" indefinitely is the realistic way it happens.
-
-Implemented in Stage 1 Steps 16-18.
+Bounded twice, in fact: by ``max_replans`` on the critic edge and by the budget
+check inside ``plan``.
 """

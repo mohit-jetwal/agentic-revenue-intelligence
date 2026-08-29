@@ -4,11 +4,13 @@ Agentic decision intelligence for CPG/Retail revenue, pricing and promotion
 management. Claude plans, selects tools, interprets evidence and re-plans.
 Deterministic ML, statistical and optimisation models produce every number.
 
-> **Status: Stage 1, Step 3 — data access, contracts and feature engineering.**
-> The dataset is causally simulated with recoverable relationships, and models
-> now reach it through a repository → contract → feature layer that makes
-> future-data leakage **structurally impossible**. No models or agents yet.
-> See [Roadmap](#roadmap).
+> **Status: Stage 1 complete — all 15 steps.** Six analytical models behind six
+> agent tools, a LangGraph plan/act/observe/critique loop with a separate Critic
+> and bounded re-planning, output validation that checks every numeral against
+> the tool results behind it, a golden-set evaluation with a committed baseline,
+> and a working API, CLI and UI. 1,013 tests; ruff, mypy and bandit clean.
+>
+> Stage 2 (Databricks) is designed, not built. See [Roadmap](#roadmap).
 
 ---
 
@@ -23,16 +25,21 @@ Two questions, two very different workflows:
 
 ```
 "What is next month's forecast for Product A?"
-    -> forecast tool -> validate -> answer.          One tool. Stop.
+    -> forecast tool -> critic -> answer.            One tool. Stop.
 
 "Revenue fell 12%. Cut prices or promote harder?"
-    -> baseline -> root cause -> elasticity -> cross-price
-    -> promo uplift -> optimisation -> scenarios -> critic
-    -> (re-plan if evidence is thin) -> recommendation
+    -> elasticity -> promo uplift -> optimisation -> scenarios
+    -> critic -> (re-plan if evidence is thin) -> recommendation
+
+"Why did sales of Product B collapse in July?"
+    -> no registered tool separates a supply constraint from a
+       demand fall -> decline, and say why.
 ```
 
-Fanning out to eight models for the first question would look impressive in a
-demo and be wrong. Selecting the minimum sufficient workflow is the actual skill.
+Fanning out to every model for the first question would look impressive in a
+demo and be wrong. Selecting the minimum sufficient workflow is the actual
+skill — and the third case is the one that decides whether the first two can be
+trusted.
 
 ### The division of labour
 
@@ -56,8 +63,9 @@ bare float, and a number with no provenance cannot enter a recommendation.
 
 ## Quickstart
 
-Requires [uv](https://docs.astral.sh/uv/). No Docker, no cloud account, no
-Databricks.
+Requires [uv](https://docs.astral.sh/uv/). No cloud account and no Databricks —
+everything runs locally. Docker is optional; see
+[In containers](#in-containers).
 
 The interpreter is pinned in [.python-version](.python-version) to **3.14**,
 which is what the dependency set was resolved and verified against — including
@@ -90,7 +98,16 @@ Then:
 ```powershell
 uv run ari config          # effective configuration, secrets redacted
 uv run ari health          # per-dependency status
+uv run ari tools           # what the agent can call
 uv run streamlit run app/ui/streamlit_app.py
+```
+
+Ask it something. `LLM__PROVIDER=stub` needs no API key and is what the tests
+and the golden-set evaluation use:
+
+```powershell
+uv run ari investigate "Did the promotion on product P00091 work?" --trace
+uv run ari evaluate-agent --provider stub --detail
 ```
 
 `/health` reports **degraded** on a fresh checkout. That is correct: no data has
@@ -283,6 +300,9 @@ answering from stale Parquet while believing it queried the warehouse.
 
 `app/agents/` holds node logic — prompts, parsing, the decision returned.
 `app/workflows/` holds graph assembly — edges, routing, loops, checkpoints.
+(The brief specified a fourth agent, Root Cause. It was folded into the
+Supervisor's observe step: an agent whose only job is to interpret results
+already in state is a node boundary without work behind it.)
 They change for different reasons: tuning how the Critic judges evidence should
 not touch the graph, and adding a re-planning edge should not touch the Critic's
 prompt.
@@ -294,17 +314,19 @@ prompt.
 ```
 app/
 ├── api/            FastAPI app, middleware, routes
-├── agents/         Supervisor, Root Cause, Critic, Recommendation
+├── agents/         Supervisor, Critic, Recommendation
 ├── workflows/      LangGraph graph assembly
 ├── tools/          AnalyticalTool base + registry  <- contract enforcement
-├── llm/            LLMProvider ABC, ClaudeProvider
-├── memory/         VectorStore ABC (Chroma / Databricks Vector Search)
-├── guardrails/     BudgetTracker; SQL & injection guards (Step 20)
+├── llm/            LLMProvider ABC, ClaudeProvider, offline StubProvider
+├── memory/         VectorStore ABC — interface only, no corpus to retrieve from
+├── guardrails/     BudgetTracker, output validation
 ├── observability/  structlog, trace context, metrics
 ├── schemas/        tool contract, agent state, API, domain enums
-├── services/       Container (DI seam), ModelRegistry
+├── services/       Container (DI seam), InvestigationService, ModelRegistry
+├── store/          SQLite app state: investigations, traces, feedback
 ├── config/         pydantic-settings
-└── ui/             Streamlit demo
+└── ui/             Streamlit demo, an HTTP client of the API
+evaluation/         golden set, scorer, keyword floor, committed baselines
 ml/                 8 model interfaces (baseline, forecasting, uplift,
                     elasticity, cross-price, both optimisers, scenario)
 data/
@@ -456,6 +478,31 @@ store and a polling contract to serve a demo where the answer takes seconds.
 `GET /investigation/{id}` already exists, so going async is a change of caller
 behaviour rather than a rewrite.
 
+### In containers
+
+```powershell
+docker compose up --build           # API on :8000, UI on :8501
+docker compose exec api ari generate-data --profile dev
+```
+
+Defaults to the offline stub provider, so the stack starts with no API key. Set
+`LLM__PROVIDER=claude` and `ANTHROPIC_API_KEY` in `.env` to use the real model.
+
+A fresh volume has no dataset, so investigations will report insufficient data
+until `generate-data` runs — the tools refuse rather than return an empty
+forecast, which would read as "no demand expected".
+
+Two-stage build: the builder resolves dependencies and the runtime carries only
+the finished virtualenv, so uv and the build toolchain never ship. The image runs
+as a non-root user, and the healthcheck hits `/health` rather than probing the
+port — a process listening but unable to reach its data is not healthy.
+
+**Not yet built or run.** Docker is not installed on the development machine, so
+the image has never been built. The lockfile is verified to resolve against the
+`python:3.12-slim` base including the `ui` extra, and the compose file parses,
+but neither is a substitute for a build. Treat the first `docker compose up` as
+unproven.
+
 ---
 
 ## Grading the agent
@@ -531,6 +578,12 @@ Stated plainly, because "why isn't X here" is a fair question:
   Databricks-native. There is no `boto3` in the dependency tree.
 - **Tools are registered explicitly, never discovered.** A tool becoming callable
   by an agent is a decision someone made, not a side effect of a file existing.
+- **No agentic RAG.** `VectorStore` stays an interface with no body. There is no
+  document corpus here — every number comes from a deterministic model over
+  structured data, so a vector store would be scaffolding built for its own sake.
+  The interface stays because trade terms and category policy *are* documents,
+  and that is where they would plug in.
+- **No async job queue.** Investigations run synchronously; see above.
 - **No Pandera or Great Expectations.** Most checks here are business invariants
   (`opening + received − sold = closing`) that schema libraries express awkwardly,
   and both are a large dependency for ~150 lines of arithmetic. A genuine
@@ -557,7 +610,12 @@ named for — is brought forward.
 8 price elasticity, own + cross ✅ · 9 optimisation & scenario engine ✅ ·
 10 MLflow, Claude & stub providers ✅ · 11 LangGraph plan/act/observe loop ✅ ·
 12 Critic, re-planning, human-in-the-loop ✅ · 13 agent evaluation ✅ ·
-14 FastAPI & Streamlit ✅ · 15 Docker & end-to-end validation
+14 FastAPI & Streamlit ✅ · 15 Docker & end-to-end validation ✅
+
+**Stage 1 is complete.** The compression from 23 steps to 15 happened at step 8,
+when the pace made the original scope unrealistic: analytical capabilities were
+merged and the agent layer brought forward, on the reasoning that a platform
+named for its agents should have them.
 
 Step 4 onward consumes `features/datasets/` — each model gets a builder that
 already encodes its framing (which rows are eligible, what must be excluded to
@@ -569,13 +627,20 @@ record. `DATA_BACKEND=postgres`
 is documented as a switch point at `Container.data_repository` rather than
 implemented, since a second analytical backend has no consumer.
 
-**Stage 2 — Databricks production.** Unity Catalog · Bronze/Silver/Gold ·
-feature engineering · Databricks MLflow · Model Registry · Model Serving ·
-Databricks SQL tools · Vector Search · production agents · security ·
-monitoring · CI/CD
+**Stage 2 — Databricks production. Designed, not built.** Unity Catalog ·
+Bronze/Silver/Gold · feature engineering · Databricks MLflow · Model Registry ·
+Model Serving · Databricks SQL tools · production agents · security ·
+monitoring · CI/CD. The migration design is in
+[docs/databricks_migration.md](docs/databricks_migration.md); every Stage 2
+class exists with a raising body, which proves the interfaces are satisfiable by
+a warehouse-backed implementation and surfaces anywhere an ABC leaked a
+local-only assumption.
 
-Every model in Steps 4–11 will be scored against `ground_truth/`, using the same
-method the Step 2 validation suite already applies to itself.
+The honest shape of what remains: this is a single-process local system with
+synchronous investigations and a SQLite state store. Nothing about it is
+production-scale, and the parts that would need to be — a job queue,
+authentication behind the permission filter, Unity Catalog model listing — are
+named above rather than implied to exist.
 
 ---
 

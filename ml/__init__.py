@@ -17,6 +17,4 @@ system whose reasoning layer is not deterministic.
 
 Every model reads through a ``DataRepository`` and carries ``ModelMetadata``, so
 any number it produces is attributable to a version, a dataset and an MLflow run.
-
-Implemented in Stage 1 Steps 4-11.
 """

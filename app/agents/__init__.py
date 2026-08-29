@@ -9,18 +9,20 @@ how the Critic judges evidence should not touch the graph; adding a re-planning
 edge should not touch the Critic's prompt. When both live in one module, every
 routing change becomes a diff against agent behaviour and vice versa.
 
-Four agents, deliberately, not one per model (brief section 3):
+Three agents, deliberately, not one per model (brief section 3):
 
 * **Supervisor**      - intent, objective, planning, tool selection, re-planning.
-* **Root Cause**      - hypothesis generation and evidence interpretation.
 * **Critic**          - validation, contradiction detection, sufficiency check.
 * **Recommendation**  - synthesis, trade-off comparison, final business output.
 
-The eight analytical models are *tools*, not agents. They are deterministic:
-given the same inputs they must return the same numbers, which is precisely the
-property an LLM does not have. Wrapping each in its own agent would add a
+The brief specified a fourth, Root Cause, for hypothesis generation. It was
+folded into the Supervisor's observe step: an agent whose only job is to
+interpret results already in state is a node boundary without work behind it,
+and every extra node is a round trip that has to earn itself.
+
+The analytical models are *tools*, not agents. They are deterministic: given the
+same inputs they must return the same numbers, which is precisely the property
+an LLM does not have. Wrapping each in its own agent would add a
 non-deterministic layer between the caller and a deterministic computation,
 buying latency and token cost in exchange for nothing.
-
-Implemented across Stage 1 Steps 15-18.
 """

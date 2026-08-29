@@ -79,7 +79,10 @@ def tools() -> None:
     container = Container()
     registry = container.tool_registry
     if len(registry) == 0:
-        typer.echo("No tools registered yet (registered in Stage 1 Step 13).")
+        typer.echo(
+            "No tools registered. Every tool needs its service, and a service "
+            "needs generated data: uv run ari generate-data --profile dev"
+        )
         return
     for name in registry.names():
         spec = registry.get(name).spec()

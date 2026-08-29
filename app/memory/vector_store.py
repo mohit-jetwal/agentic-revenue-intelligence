@@ -1,8 +1,14 @@
 """Vector store implementations.
 
-Both are declared now so the container has something concrete to construct and
-``GET /health`` reports honestly. Bodies land in Stage 1 Step 15 (local) and
-Stage 2 (Databricks Vector Search).
+Both are declared so the container has something concrete to construct and
+``GET /health`` reports honestly. Neither has a body, and that is a decision
+rather than a gap: there is no document corpus in this platform to retrieve
+from. Every number comes from a deterministic model over structured data, so a
+vector store would be scaffolding built for its own sake.
+
+The interface stays because the shape of the problem is real - promotional
+guidelines, trade terms and category policy are documents, and the day one
+exists this is where it plugs in.
 """
 
 from __future__ import annotations
@@ -12,7 +18,7 @@ from typing import Any
 
 from app.memory.base import Document, RetrievedDocument, VectorStore
 
-_LOCAL_STEP = "Stage 1 Step 15 (enterprise RAG)"
+_LOCAL_STEP = "not scheduled (no document corpus exists to retrieve from)"
 _PROD_STAGE = "Stage 2 (Databricks Vector Search)"
 
 

@@ -1,0 +1,71 @@
+# Local demo stack: the API and the Streamlit UI, sharing one image and one
+# data volume.
+#
+# No database service. DuckDB and SQLite are files, and adding Postgres would
+# introduce a container, a connection pool and a migration story to serve a
+# workload that is one process reading Parquet.
+
+name: agentic-revenue-intelligence
+
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    image: ari:local
+    ports:
+      - "8000:8000"
+    environment:
+      APP__ENVIRONMENT: local
+      # Defaults to the offline stub so `docker compose up` works with no API
+      # key. Set LLM__PROVIDER=claude and ANTHROPIC_API_KEY in a local .env to
+      # run against the real model.
+      LLM__PROVIDER: ${LLM__PROVIDER:-stub}
+      LLM__API_KEY: ${ANTHROPIC_API_KEY:-}
+      DATA__APP_DATABASE_URL: sqlite:////app/data/local/app_state.sqlite
+    # No `env_file:`. Compose already auto-loads a project-level `.env` for the
+    # `${...}` interpolation above, so declaring it again would add a file that
+    # must exist - and on a fresh clone it does not.
+    volumes:
+      # Named rather than a bind mount: the generated dataset takes minutes to
+      # produce and should survive `docker compose down` and an image rebuild.
+      - ari-data:/app/data/local
+      - ari-mlruns:/app/mlruns
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: .
+      target: runtime
+    image: ari:local
+    command:
+      - streamlit
+      - run
+      - app/ui/streamlit_app.py
+      - --server.port=8501
+      - --server.address=0.0.0.0
+      - --server.headless=true
+    ports:
+      - "8501:8501"
+    environment:
+      APP__ENVIRONMENT: local
+      # The UI is an HTTP client of the API, so it needs the service name rather
+      # than localhost - inside the network, localhost is the UI's own container.
+      ARI_API_URL: http://api:8000
+    depends_on:
+      api:
+        # Waits for the health check, not just for the process to start. The API
+        # loads models on first use and a UI that connects before it is ready
+        # shows an error on the demo's opening screen.
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  ari-data:
+  ari-mlruns:

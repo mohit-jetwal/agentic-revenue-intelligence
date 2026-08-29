@@ -1,0 +1,46 @@
+# Everything the build does not need. Keeping the context small matters here:
+# `data/local/` holds a generated Parquet dataset that runs to hundreds of
+# megabytes, and sending it to the daemon on every build would dominate the
+# build time while contributing nothing - the container generates its own.
+
+.git
+.github
+.venv
+venv
+
+__pycache__
+*.py[cod]
+*.egg-info
+.eggs
+build
+dist
+
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.coverage
+coverage.xml
+htmlcov
+
+# Generated artefacts. Mounted as a volume at run time, never baked in.
+data/local
+mlruns
+mlartifacts
+*.parquet
+*.duckdb
+*.duckdb.wal
+*.sqlite
+*.sqlite3
+
+# Secrets must never enter an image layer, where they persist even if a later
+# layer deletes them.
+.env
+.env.*
+!.env.example
+
+tests
+docs
+notebooks
+scripts
+*.md
+!README.md
