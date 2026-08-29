@@ -213,6 +213,18 @@ class DatabricksDataRepository(DataRepository):
     ) -> pd.DataFrame:
         raise self._not_yet("get_competitor_prices")
 
+    def get_commodity_costs(
+        self,
+        *,
+        categories: list[str] | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
+    ) -> pd.DataFrame:
+        raise self._not_yet("get_commodity_costs")
+
     # -- generic ------------------------------------------------------------
 
     def execute_query(

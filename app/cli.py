@@ -510,6 +510,78 @@ def _uplift_panel(repository: Any, pairs: Any) -> Any:
 
 
 @app.command()
+def elasticity(
+    product: str = typer.Option(..., help="Product to estimate elasticity for."),
+    region: str | None = typer.Option(None, help="Restrict to one region."),
+    cross: bool = typer.Option(False, help="Also show substitutes and complements."),
+    compare: bool = typer.Option(False, help="Show every estimator side by side."),
+) -> None:
+    """Own-price elasticity, and optionally what the product competes with.
+
+    Prints the method before the number. On this data the naive estimator
+    recovers only ~56% of the true elasticity, so an elasticity that travels
+    without saying how it was identified invites the wrong pricing decision.
+    """
+    from app.schemas.elasticity import ElasticityErrorResponse, ElasticityRequest
+
+    configure_logging()
+    response = Container().elasticity_service.estimate(
+        ElasticityRequest(
+            product_id=product,
+            region=region,
+            include_cross_price=cross,
+            include_comparison=compare,
+        )
+    )
+
+    if isinstance(response, ElasticityErrorResponse):
+        typer.echo(f"[{response.error_code}] {response.message}")
+        typer.echo(f"recoverable: {response.recoverable}")
+        raise typer.Exit(code=1)
+
+    band = ""
+    if response.confidence_interval is not None:
+        low, high = response.confidence_interval
+        band = f"  [{low:.3f}, {high:.3f}]"
+
+    typer.echo(f"method      : {response.method}")
+    typer.echo(f"elasticity  : {response.elasticity:+.3f}{band}")
+    typer.echo(
+        f"reading     : {'ELASTIC' if response.is_elastic else 'inelastic'} "
+        f"- a price rise {response.revenue_direction}"
+    )
+    typer.echo(f"sample      : {response.sample_size:,} rows")
+    if response.estimation_window:
+        start, end = response.estimation_window
+        typer.echo(f"window      : {start} .. {end}")
+
+    if response.comparison:
+        typer.echo("")
+        typer.echo(f"{'method':<14}{'elasticity':>12}  selectable")
+        for row in response.comparison:
+            mark = "yes" if row.selectable else "no"
+            typer.echo(f"{row.method:<14}{row.elasticity:>12.3f}  {mark}")
+
+    if response.cross_price:
+        typer.echo("")
+        typer.echo(f"tested {response.pairs_tested} candidate pairs")
+        typer.echo(f"{'product':<12}{'cross':>9}  relationship  strength")
+        for record in response.cross_price:
+            if record.is_significant:
+                typer.echo(
+                    f"{record.source_product_id:<12}{record.cross_elasticity:>9.3f}  "
+                    f"{record.relationship_type:<13} {record.strength}"
+                )
+        if not response.substitutes and not response.complements:
+            typer.echo("  no significant relationships after multiple-testing correction")
+
+    if response.warnings:
+        typer.echo("")
+        for warning in response.warnings:
+            typer.echo(f"  ! {warning}")
+
+
+@app.command()
 def prompts() -> None:
     """List available prompt versions."""
     from prompts.registry import list_prompts

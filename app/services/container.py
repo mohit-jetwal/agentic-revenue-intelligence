@@ -30,6 +30,7 @@ from app.memory.base import VectorStore
 from app.memory.vector_store import ChromaVectorStore, DatabricksVectorSearchStore
 from app.observability.logging import get_logger
 from app.services.baseline_service import BaselineSalesService
+from app.services.elasticity_service import ElasticityService
 from app.services.forecast_service import ForecastingService
 from app.services.model_registry import (
     DatabricksModelRegistry,
@@ -152,6 +153,16 @@ class Container:
         """
         return PromoUpliftService(self.data_repository, settings=self.settings)
 
+    @cached_property
+    def elasticity_service(self) -> ElasticityService:
+        """Own-price and cross-price elasticity (Step 8).
+
+        No artifact to load: elasticity is estimated on demand, because the
+        answer depends on the slice being asked about. An elasticity for one
+        region is a different regression, not a filter over a stored one.
+        """
+        return ElasticityService(self.data_repository, settings=self.settings)
+
     # -- retrieval ----------------------------------------------------------
 
     @cached_property
@@ -203,6 +214,7 @@ class Container:
         return build_default_registry(
             forecasting_service=self.forecasting_service,
             promo_uplift_service=self.promo_uplift_service,
+            elasticity_service=self.elasticity_service,
         )
 
     # -- per-request objects ------------------------------------------------

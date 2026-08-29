@@ -274,6 +274,30 @@ class DataRepository(ABC):
         know a rival's until it hits the shelf.
         """
 
+    @abstractmethod
+    def get_commodity_costs(
+        self,
+        *,
+        categories: list[str] | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
+    ) -> pd.DataFrame:
+        """Input cost index by category x date.
+
+        Exposed because it is the **instrument** for price. Input costs shift
+        price through pass-through but do not enter demand directly, which is
+        what lets Step 8 identify own-price elasticity in the presence of the
+        endogeneity the pricing generator builds in deliberately: prices are
+        raised into anticipated strong demand, so a naive regression recovers
+        the pricing manager's behaviour rather than the shopper's.
+
+        Observed rather than known-in-advance: cost indices are published with a
+        lag, so a model on day D does not have day D's figure.
+        """
+
     # -- generic ------------------------------------------------------------
 
     @abstractmethod

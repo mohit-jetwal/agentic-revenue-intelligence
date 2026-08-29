@@ -393,13 +393,16 @@ Stated plainly, because "why isn't X here" is a fair question:
 
 ## Roadmap
 
-**Stage 1 — local MVP.** 1 skeleton ✅ · 2 synthetic data ✅ ·
-3 data access & features ✅ · 4 baseline · 5 forecasting · 6 promo uplift ·
-7 trade-promo optimisation · 8 price elasticity · 9 cross-price elasticity ·
-10 price optimisation · 11 scenario engine · 12 MLflow · 13 tool interfaces ·
-14 Claude · 15 LangGraph Supervisor · 16 agentic loop · 17 Critic ·
-18 re-planning · 19 FastAPI · 20 Streamlit · 21 agent evaluation · 22 Docker ·
-23 end-to-end validation
+**Stage 1 — local MVP.** Compressed from 23 steps to 15: the remaining
+analytical models are merged, and the agent layer — the part the platform is
+named for — is brought forward.
+
+1 skeleton ✅ · 2 synthetic data ✅ · 3 data access & features ✅ ·
+4 baseline ✅ · 5–6 demand forecasting ✅ · 7 promo uplift ✅ ·
+8 price elasticity, own + cross ✅ · 9 optimisation & scenario engine ·
+10 MLflow, Claude & stub providers · 11 LangGraph plan/act/observe loop ·
+12 Critic, re-planning, human-in-the-loop · 13 agent evaluation ·
+14 FastAPI & Streamlit · 15 Docker & end-to-end validation
 
 Step 4 onward consumes `features/datasets/` — each model gets a builder that
 already encodes its framing (which rows are eligible, what must be excluded to

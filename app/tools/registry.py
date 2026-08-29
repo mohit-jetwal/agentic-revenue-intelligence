@@ -77,6 +77,7 @@ def build_default_registry(
     *,
     forecasting_service: object | None = None,
     promo_uplift_service: object | None = None,
+    elasticity_service: object | None = None,
 ) -> ToolRegistry:
     """Construct the registry with the platform's analytical tools.
 
@@ -101,5 +102,10 @@ def build_default_registry(
         from app.tools.promo_uplift_tool import PromoUpliftTool
 
         registry.register(PromoUpliftTool(promo_uplift_service))  # type: ignore[arg-type]
+
+    if elasticity_service is not None:
+        from app.tools.elasticity_tool import ElasticityTool
+
+        registry.register(ElasticityTool(elasticity_service))  # type: ignore[arg-type]
 
     return registry

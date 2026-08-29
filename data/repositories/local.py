@@ -581,6 +581,32 @@ class LocalDataRepository(DataRepository):
             filters={"products": len(product_ids) if product_ids else None},
         )
 
+    def get_commodity_costs(
+        self,
+        *,
+        categories: list[str] | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        as_of_date: date | None = None,
+        max_rows: int | None = None,
+        validate: bool = False,
+    ) -> pd.DataFrame:
+        start_date, end_date = clamp_window(
+            "commodity_costs", start_date, end_date, as_of_date
+        )
+        clauses: list[str] = []
+        parameters: list[Any] = []
+        self._add_in(clauses, parameters, "category", categories)
+        self._add_date_range(clauses, parameters, "date", start_date, end_date)
+        return self._select(
+            "commodity_costs",
+            clauses,
+            parameters,
+            limit=max_rows,
+            validate=validate,
+            filters={"categories": len(categories) if categories else None},
+        )
+
     # -- generic ------------------------------------------------------------
 
     def execute_query(
