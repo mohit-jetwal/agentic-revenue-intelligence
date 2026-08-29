@@ -1,19 +1,20 @@
 ﻿"""The LangGraph investigation loop.
 
-Assembles the nodes into the plan / act / observe cycle::
+Assembles the nodes into the plan / act / observe / critique cycle::
 
-    classify_intent -> plan -> execute_step -> observe -> evaluate
-                        ^                                    |
-                        +--------- more steps ---------------+
-                                                             |
-                                                          finish
+    classify_intent -> plan -> execute_step -> observe
+                        ^                        |
+                        |                   more steps
+                        |                        |
+                        |                     critic
+                        |                    /      \\
+                        +--- insufficient ---        -> recommend -> finish
+                          (bounded by max_replans)        ^
+                                                          |
+                                                 human approval interrupt
+                                                 (above the impact threshold)
 
-Step 12 adds the Critic, re-planning and the human-approval interrupt on the
-edge out of ``evaluate``. The shape is built to accept them: ``evaluate`` is
-already a conditional router rather than a straight edge, so adding a
-``replan`` destination is an edge change rather than a restructure.
-
-**Three properties this layer owns.**
+**Four properties this layer owns.**
 
 *Bounded loops.* Every path that can repeat passes through the
 :class:`~app.guardrails.budget.BudgetTracker`. An agent that can re-plan is an
@@ -27,6 +28,10 @@ place.
 *A truncated investigation says so.* Running out of budget produces a partial
 answer explicitly flagged as incomplete, never a confident one built on an
 investigation that did not finish.
+
+*Re-planning is bounded twice.* By ``max_replans`` and by the budget. A Critic
+that is never satisfied is the realistic way an agent loops forever, and the
+loop back to ``plan`` is the only cycle in the graph.
 """
 
 from __future__ import annotations
@@ -37,6 +42,8 @@ from typing import Any
 
 from langgraph.graph import END, StateGraph
 
+from app.agents.critic import CriticAgent
+from app.agents.recommendation import RecommendationAgent
 from app.agents.supervisor import SupervisorAgent
 from app.guardrails.budget import BudgetExceededError, BudgetTracker
 from app.observability.context import trace_context
@@ -65,10 +72,22 @@ class InvestigationDeps:
     supervisor: SupervisorAgent
     registry: ToolRegistry
     budget: BudgetTracker
+    #: Optional. Without them the graph runs plan/act/observe and stops, which
+    #: is a legitimate configuration for a tool-only investigation.
+    critic: CriticAgent | None = None
+    recommender: RecommendationAgent | None = None
+    max_replans: int = 2
 
 
-def build_graph(deps: InvestigationDeps) -> Any:
-    """Compile the investigation graph."""
+def build_graph(deps: InvestigationDeps, *, checkpointer: Any | None = None) -> Any:
+    """Compile the investigation graph.
+
+    ``checkpointer`` is what makes the human-approval interrupt real: the graph
+    has to persist its state to stop, wait for a person, and resume. Without one
+    the approval flag is still set on the recommendation but execution runs
+    straight through - the difference between "flagged for approval" and
+    "blocked pending approval".
+    """
     graph = StateGraph(AgentState)
 
     # `type: ignore[call-overload]` on each: LangGraph's `add_node` overloads
@@ -80,19 +99,32 @@ def build_graph(deps: InvestigationDeps) -> Any:
     graph.add_node("plan", _plan_node(deps))  # type: ignore[call-overload]
     graph.add_node("execute_step", _execute_node(deps))  # type: ignore[call-overload]
     graph.add_node("observe", _observe_node(deps))  # type: ignore[call-overload]
+    graph.add_node("critic", _critic_node(deps))  # type: ignore[call-overload]
+    graph.add_node("recommend", _recommend_node(deps))  # type: ignore[call-overload]
     graph.add_node("finish", _finish_node(deps))  # type: ignore[call-overload]
 
     graph.set_entry_point("classify_intent")
     graph.add_edge("classify_intent", "plan")
     graph.add_conditional_edges(
-        "plan", _after_plan, {"execute_step": "execute_step", "finish": "finish"}
+        "plan", _after_plan, {"execute_step": "execute_step", "critic": "critic"}
     )
     graph.add_edge("execute_step", "observe")
     graph.add_conditional_edges(
-        "observe", _evaluate, {"execute_step": "execute_step", "finish": "finish"}
+        "observe", _evaluate, {"execute_step": "execute_step", "critic": "critic"}
     )
+    # The only cycle in the graph, bounded twice: by max_replans here and by the
+    # budget check inside `plan`.
+    graph.add_conditional_edges(
+        "critic", _after_critic, {"plan": "plan", "recommend": "recommend"}
+    )
+    graph.add_edge("recommend", "finish")
     graph.add_edge("finish", END)
 
+    if checkpointer is not None:
+        # Interrupt *before* recommend, not after: the point is to review the
+        # evidence before a recommendation is written, not to rubber-stamp one
+        # already produced.
+        return graph.compile(checkpointer=checkpointer, interrupt_before=["recommend"])
     return graph.compile()
 
 
@@ -227,6 +259,52 @@ def _observe_node(deps: InvestigationDeps) -> Callable[[AgentState], AgentState]
     return observe
 
 
+def _critic_node(deps: InvestigationDeps) -> Callable[[AgentState], AgentState]:
+    def critic(state: AgentState) -> AgentState:
+        """Judge whether the evidence supports a conclusion.
+
+        With no Critic configured the investigation proceeds - a tool-only run
+        is a legitimate configuration, and silently inventing a passing verdict
+        would be worse than having none.
+        """
+        if deps.critic is None:
+            return {}
+
+        verdict = deps.critic.review(
+            state["user_question"], state.get("tool_results", [])
+        )
+        return {
+            "critic_verdict": verdict,
+            "replan_reason": (
+                "; ".join(verdict.required_followup) or "; ".join(verdict.issues)
+                if not verdict.valid
+                else None
+            ),
+        }
+
+    return critic
+
+
+def _recommend_node(deps: InvestigationDeps) -> Callable[[AgentState], AgentState]:
+    def recommend(state: AgentState) -> AgentState:
+        if deps.recommender is None:
+            return {}
+
+        verdict = state.get("critic_verdict")
+        recommendation = deps.recommender.synthesise(
+            state["user_question"],
+            state.get("tool_results", []),
+            critic_issues=list(verdict.issues) if verdict else None,
+            # False only when the re-plan budget ran out with the objection
+            # still standing; the recommendation caps its confidence to match.
+            critic_satisfied=verdict.valid if verdict else True,
+            truncated=bool(state.get("errors")),
+        )
+        return {"final_recommendation": recommendation}
+
+    return recommend
+
+
 def _finish_node(deps: InvestigationDeps) -> Callable[[AgentState], AgentState]:
     def finish(state: AgentState) -> AgentState:
         """Close the investigation and record how confident it may be.
@@ -267,30 +345,65 @@ def _after_plan(state: AgentState) -> str:
     """An empty plan is a valid outcome, not a failure.
 
     The Supervisor is instructed to return no steps when a question cannot be
-    answered with the available tools. Routing that to ``finish`` lets the
-    investigation say so, rather than looping trying to find something to run.
+    answered with the available tools. Routing to ``critic`` rather than
+    straight to ``finish`` means the investigation still produces a verdict and
+    a recommendation saying so, instead of returning nothing.
     """
     plan = state.get("plan")
     if plan is None or not plan.steps:
-        return "finish"
+        return "critic"
     return "execute_step"
 
 
 def _evaluate(state: AgentState) -> str:
-    """Continue through the plan, or stop.
-
-    Step 12 adds a ``replan`` destination here when the Critic judges the
-    evidence insufficient. Today the only reasons to stop are: the plan is done,
-    or the budget is gone.
-    """
+    """Continue through the plan, or hand it to the Critic."""
     plan = state.get("plan")
     if plan is None or not plan.pending_steps():
-        return "finish"
+        return "critic"
     if state.get("errors"):
-        # A budget or execution failure already recorded. Stop rather than
-        # burning the remainder on steps that will hit the same wall.
-        return "finish"
+        # A budget or execution failure already recorded. Stop executing rather
+        # than burning the remainder on steps that will hit the same wall - but
+        # still critique what was gathered.
+        return "critic"
     return "execute_step"
+
+
+def _after_critic(state: AgentState) -> str:
+    """Re-plan on an insufficient verdict, bounded twice.
+
+    ``max_replans`` caps how many times the Critic may send an investigation
+    back, and the budget check inside ``plan`` catches the rest. A Critic that
+    is never satisfied is the realistic way an agent loops forever, and this is
+    the only cycle in the graph.
+
+    Hitting the cap is **not** silent. The verdict's issues travel into the
+    recommendation, so a conclusion reached after exhausting the re-plan budget
+    says what remained unresolved.
+    """
+    verdict = state.get("critic_verdict")
+    if verdict is None or verdict.valid:
+        return "recommend"
+
+    if state.get("replan_count", 0) >= _max_replans(state):
+        logger.info(
+            "graph.replan_limit_reached",
+            replans=state.get("replan_count", 0),
+            unresolved=len(verdict.required_followup),
+        )
+        return "recommend"
+
+    if state.get("errors"):
+        # The budget is already gone. Re-planning would produce a plan that
+        # cannot execute.
+        return "recommend"
+
+    logger.info("graph.replanning", reason=state.get("replan_reason"))
+    return "plan"
+
+
+def _max_replans(state: AgentState) -> int:
+    """The cap, carried in state so the router stays a pure function."""
+    return int(state.get("max_replans", 2))
 
 
 # --------------------------------------------------------------------------
@@ -310,7 +423,12 @@ def run_investigation(
     Wrapped in a trace context so every log line from every node - including
     inside tool execution - correlates to one investigation id.
     """
-    state = new_agent_state(question, user_id=user_id, investigation_id=investigation_id)
+    state = new_agent_state(
+        question,
+        user_id=user_id,
+        investigation_id=investigation_id,
+        max_replans=deps.max_replans,
+    )
     graph = build_graph(deps)
 
     with trace_context(
@@ -356,7 +474,43 @@ def summarise(state: AgentState) -> dict[str, Any]:
         "errors": state.get("errors", []),
         "confidence": state.get("confidence", 0.0),
         "tool_calls": state.get("tool_call_count", 0),
+        "replans": state.get("replan_count", 0),
         "complete": not state.get("errors"),
+        "critic": _critic_summary(state),
+        "recommendation": _recommendation_summary(state),
+    }
+
+
+def _critic_summary(state: AgentState) -> dict[str, Any] | None:
+    verdict = state.get("critic_verdict")
+    if verdict is None:
+        return None
+    return {
+        "valid": verdict.valid,
+        "confidence": verdict.confidence,
+        "issues": list(verdict.issues),
+        "required_followup": list(verdict.required_followup),
+    }
+
+
+def _recommendation_summary(state: AgentState) -> dict[str, Any] | None:
+    recommendation = state.get("final_recommendation")
+    if recommendation is None:
+        return None
+    return {
+        "executive_summary": recommendation.executive_summary,
+        "root_cause": recommendation.root_cause,
+        "recommended_action": recommendation.recommended_action,
+        "confidence": recommendation.confidence,
+        # The flag a caller must check before acting. See the approval threshold
+        # in AgentSettings.
+        "requires_human_approval": recommendation.requires_human_approval,
+        "evidence": [
+            {"claim": e.claim, "source": e.source_tool, "trace_id": e.source_trace_id}
+            for e in recommendation.evidence
+        ],
+        "assumptions": list(recommendation.assumptions),
+        "risks": list(recommendation.risks),
     }
 
 

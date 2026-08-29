@@ -362,6 +362,52 @@ built on an investigation that never finished.
 
 ---
 
+## How a wrong number is prevented from reaching a decision
+
+The Supervisor plans and the tools compute, but neither is in a position to
+judge whether the result answers the question. Three controls sit between the
+evidence and the person reading it.
+
+**The Critic is a separate agent.** An agent asked to plan an investigation *and*
+assess whether its own investigation succeeded will usually find that it did.
+Splitting the roles is the structural version of that scepticism. Its verdict
+routes the graph: `valid=False` with a specific `required_followup` sends the
+investigation back to planning with the gap named.
+
+Before the model is consulted, `_mechanical_issues` runs checks that need no
+judgement and cost no tokens. A result carrying `validation_status: failed` is
+marked **BLOCKING** and overrides whatever the model concludes — that finding is
+decidable, and no confident reading of it should be able to win.
+
+**Re-planning is bounded twice**, by `AGENT__MAX_REPLANS` and by the budget check
+inside `plan`. A Critic that is never satisfied is the realistic way an agent
+loops forever, so the cap — not the Critic — ends the investigation. When it
+does, the unresolved objection travels into the recommendation's risks and caps
+its confidence at 0.5. An objection that was never answered must not arrive
+looking settled.
+
+**Every numeral in the final recommendation is checked against `tool_results`.**
+This is the hallucination control that is architectural rather than prompted: the
+system prompt tells the model never to state a number it did not get from a tool,
+and [`app/guardrails/output_validation.py`](app/guardrails/output_validation.py)
+verifies it did not. Figures are matched at the rounding a readable sentence
+applies — 1,427,355 written as "1.43M", 0.6761 as "68%".
+
+It reports rather than blocks, for three reasons. Legitimate non-tool numbers
+exist (a year, a horizon, "the top 3"). Arithmetic over sourced values is real
+and not distinguishable from invention without the reasoning the check does not
+have. And a labelled number tells a reviewer where to look, where a suppressed
+sentence tells them nothing. An unsourced figure caps confidence at 0.6 and is
+named in the output.
+
+**Impact above `AGENT__HUMAN_APPROVAL_THRESHOLD` requires a person.** With a
+checkpointer the graph interrupts *before* the recommendation is written, not
+after — the point is to review the evidence, not to rubber-stamp a conclusion
+already drafted. Without a checkpointer the flag is still set but nothing blocks
+on it, which is the difference between "flagged for approval" and "gated on it".
+
+---
+
 ## Deliberate scope decisions
 
 Stated plainly, because "why isn't X here" is a fair question:
@@ -373,9 +419,8 @@ Stated plainly, because "why isn't X here" is a fair question:
   would add a dependency and a mental model in exchange for nothing.
 - **No `aws/`, `terraform/`, `lambda/`, `ecs/`, `eks/`, `ecr/`.** Production is
   Databricks-native. There is no `boto3` in the dependency tree.
-- **Empty tool registry.** Tools are registered in Step 13, once Steps 4–11
-  supply the models. A tool becoming callable by an agent should be a decision
-  someone made, not a side effect of a file existing.
+- **Tools are registered explicitly, never discovered.** A tool becoming callable
+  by an agent is a decision someone made, not a side effect of a file existing.
 - **No Pandera or Great Expectations.** Most checks here are business invariants
   (`opening + received − sold = closing`) that schema libraries express awkwardly,
   and both are a large dependency for ~150 lines of arithmetic. A genuine
@@ -399,9 +444,9 @@ named for — is brought forward.
 
 1 skeleton ✅ · 2 synthetic data ✅ · 3 data access & features ✅ ·
 4 baseline ✅ · 5–6 demand forecasting ✅ · 7 promo uplift ✅ ·
-8 price elasticity, own + cross ✅ · 9 optimisation & scenario engine ·
-10 MLflow, Claude & stub providers · 11 LangGraph plan/act/observe loop ·
-12 Critic, re-planning, human-in-the-loop · 13 agent evaluation ·
+8 price elasticity, own + cross ✅ · 9 optimisation & scenario engine ✅ ·
+10 MLflow, Claude & stub providers ✅ · 11 LangGraph plan/act/observe loop ✅ ·
+12 Critic, re-planning, human-in-the-loop ✅ · 13 agent evaluation ·
 14 FastAPI & Streamlit · 15 Docker & end-to-end validation
 
 Step 4 onward consumes `features/datasets/` — each model gets a builder that
@@ -409,7 +454,7 @@ already encodes its framing (which rows are eligible, what must be excluded to
 keep the estimate honest) and is scored against Step 2's hidden ground truth.
 
 Deferred from Step 3: the SQLite application-state store (investigations, traces,
-feedback) is not built yet — nothing writes to it until Step 19. `DATA_BACKEND=postgres`
+feedback) is not built yet — nothing writes to it until Step 14. `DATA_BACKEND=postgres`
 is documented as a switch point at `Container.data_repository` rather than
 implemented, since a second analytical backend has no consumer.
 

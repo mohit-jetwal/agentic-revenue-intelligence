@@ -134,6 +134,17 @@ class AgentSettings(BaseSettings):
     max_execution_seconds: float = Field(default=300.0, gt=0)
     max_token_budget: int = Field(default=200_000, gt=0)
 
+    #: How many times the Critic may send an investigation back to planning.
+    #: Separate from ``max_iterations`` because they catch different failures: a
+    #: planning loop that makes no tool calls, versus a Critic that is never
+    #: satisfied. Two is deliberate - a third attempt at the same question has
+    #: almost never produced better evidence than saying what is missing.
+    max_replans: int = Field(default=2, ge=0)
+
+    #: Recommendations whose absolute profit impact exceeds this require human
+    #: approval before they leave the system. Zero means approve everything.
+    human_approval_threshold: float = Field(default=1_000_000.0, ge=0)
+
 
 class VectorStoreSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="VECTORSTORE__", **_SECTION_CONFIG)

@@ -204,6 +204,10 @@ class AgentState(TypedDict, total=False):
     tokens_used: int
     started_at: datetime
     replan_count: int
+    #: Cap on Critic-driven re-plans, carried in state so the routing function
+    #: stays pure - a router that reached into a container would be untestable
+    #: without one.
+    max_replans: int
 
 
 def new_agent_state(
@@ -212,6 +216,7 @@ def new_agent_state(
     user_id: str | None = None,
     investigation_id: str | None = None,
     trace_id: str | None = None,
+    max_replans: int = 2,
 ) -> AgentState:
     """Build a fresh state with all control counters initialised.
 
@@ -242,4 +247,5 @@ def new_agent_state(
         tokens_used=0,
         started_at=datetime.now(UTC),
         replan_count=0,
+        max_replans=max_replans,
     )
