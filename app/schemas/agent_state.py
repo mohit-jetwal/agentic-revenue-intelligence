@@ -171,9 +171,17 @@ class AgentState(TypedDict, total=False):
     # --- understanding ---
     intent: IntentType | None
     objective: BusinessObjective | None
+    #: Products, stores, regions and categories named in the question. Extracted
+    #: at classification so plans can scope their tool calls rather than running
+    #: platform-wide, and carried in state because re-planning needs them too.
+    entities: dict[str, list[str]]
 
     # --- planning (replaced on re-plan, not appended) ---
     plan: InvestigationPlan | None
+    #: What the Critic said was missing, passed verbatim into the next plan. A
+    #: re-plan that does not know precisely what was insufficient repeats the
+    #: same steps.
+    replan_reason: str | None
 
     # --- execution (append-only across nodes) ---
     completed_steps: Annotated[list[str], operator.add]
@@ -217,7 +225,9 @@ def new_agent_state(
         user_id=user_id,
         intent=None,
         objective=None,
+        entities={},
         plan=None,
+        replan_reason=None,
         completed_steps=[],
         tool_results=[],
         observations=[],
