@@ -1,73 +1,179 @@
-"""Streamlit demo UI - agentic trace layout.
-
-Renders the trace structure from section 22 against static placeholder data so
-the intended shape is reviewable before the agent exists. Wired to the live API
-in Stage 1 Step 20.
+"""Streamlit demo UI, wired to the live API.
 
 Run with::
 
-    streamlit run app/ui/streamlit_app.py
+    uv run uvicorn app.main:app --reload      # in one terminal
+    uv run streamlit run app/ui/streamlit_app.py
+
+**Talks HTTP, not Python.** It would be shorter to import the container and call
+the service directly, and that shortcut would make the UI a second consumer of
+the internals rather than a client of the API - so an endpoint could break
+without the demo noticing. Going over HTTP means the UI exercises the contract a
+real client would.
 
 Design constraint carried through from the brief: the trace shows the plan, the
 tool calls, their structured results, re-planning events and the critic verdict.
 It shows concise reasoning *summaries*. It never exposes private
-chain-of-thought.
+chain-of-thought - the API does not return it, and the UI could not display it
+if it wanted to.
+
+**What the UI must not do is soften the output.** A recommendation that carries
+risks, an unsourced-figure warning or an approval flag is displayed with them
+attached. A demo that shows the headline and hides the caveats is a
+misrepresentation of what the system actually concluded.
 """
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
+import httpx
 import streamlit as st
 
 from app.config.settings import get_settings
 
-PLACEHOLDER_NOTICE = (
-    "**Placeholder trace.** The layout below is static sample data illustrating "
-    "the intended agentic trace. Live investigations are wired in Stage 1 Step 20."
-)
+DEFAULT_API = os.getenv("ARI_API_URL", "http://127.0.0.1:8000")
 
-SAMPLE_QUESTION = "Revenue declined 12% this month. Should we reduce prices or increase promotions?"
-
-SAMPLE_PLAN: list[dict[str, str]] = [
-    {"tool": "baseline_sales", "why": "Establish whether the decline exceeds normal variation."},
-    {"tool": "price_elasticity", "why": "Price rose 8%; quantify demand sensitivity."},
-    {"tool": "cross_price_elasticity", "why": "Check whether volume moved to a substitute."},
-    {"tool": "promo_uplift", "why": "Assess whether current promotions are incremental."},
-    {"tool": "scenario_simulation", "why": "Compare a price cut against added promotion spend."},
+EXAMPLE_QUESTIONS = [
+    "Did the promotion on product P00091 between 2024-04-08 and 2024-04-28 "
+    "generate incremental profit, and was it worth running?",
+    "We raised the price of product P00013 on 2024-06-21. How did demand "
+    "respond, and was the increase the right call?",
+    "Sales of product P00245 fell sharply in July 2025. What caused the decline?",
 ]
 
-SAMPLE_RESULTS: list[dict[str, Any]] = [
-    {
-        "tool": "baseline_sales",
-        "model": "baseline_sales:v1.0",
-        "duration_ms": 420,
-        "result": {"baseline_revenue": 100_000, "actual_revenue": 88_000, "revenue_gap_pct": -0.12},
-        "confidence": 0.91,
-    },
-    {
-        "tool": "price_elasticity",
-        "model": "price_elasticity:v1.0",
-        "duration_ms": 1_180,
-        "result": {"elasticity": -1.42, "confidence_interval": [-1.65, -1.20], "p_value": 0.001},
-        "confidence": 0.88,
-    },
-]
+#: Trace event type -> (icon, label). Unlisted types still render, with a
+#: neutral marker: a UI that silently dropped an event it did not recognise
+#: would show an incomplete history of how the answer was reached.
+_EVENT_STYLE: dict[str, tuple[str, str]] = {
+    "intent_classified": ("🧭", "Understood"),
+    "plan_created": ("📋", "Planned"),
+    "tool_called": ("🔧", "Tool"),
+    "tool_failed": ("⚠️", "Tool failed"),
+    "observation": ("👁", "Observed"),
+    "replanned": ("🔁", "Re-planned"),
+    "critic_verdict": ("⚖️", "Critic"),
+    "recommendation": ("✅", "Recommendation"),
+    "error": ("❌", "Error"),
+}
+
+
+def _api_url() -> str:
+    return st.session_state.get("api_url", DEFAULT_API).rstrip("/")
+
+
+def _post(path: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+    try:
+        response = httpx.post(f"{_api_url()}{path}", json=payload, timeout=300.0)
+    except httpx.HTTPError as exc:
+        st.error(f"Could not reach the API at {_api_url()}: {exc}")
+        return None
+    if response.status_code >= 400:
+        st.error(f"{response.status_code}: {response.text[:500]}")
+        return None
+    return response.json()
+
+
+def _get(path: str) -> dict[str, Any] | None:
+    try:
+        response = httpx.get(f"{_api_url()}{path}", timeout=60.0)
+    except httpx.HTTPError as exc:
+        st.error(f"Could not reach the API at {_api_url()}: {exc}")
+        return None
+    if response.status_code >= 400:
+        return None
+    return response.json()
 
 
 def _sidebar() -> None:
     settings = get_settings()
     with st.sidebar:
+        st.header("Connection")
+        st.session_state["api_url"] = st.text_input("API URL", value=_api_url())
+
+        health = _get("/health")
+        if health is None:
+            st.error("API unreachable")
+        else:
+            st.success(f"API {health['status']}")
+            for dependency in health.get("dependencies", []):
+                marker = "🟢" if dependency["status"] == "ok" else "🟡"
+                st.caption(f"{marker} {dependency['name']} — {dependency['status']}")
+
+        st.divider()
         st.header("Environment")
         st.write(f"**Mode:** `{settings.app.environment.value}`")
-        st.write(f"**Version:** `{settings.app.version}`")
         st.write(f"**Planner:** `{settings.llm.planner_model}`")
-        st.write(f"**Worker:** `{settings.llm.model}`")
         st.divider()
         st.caption(
-            "Numbers shown in a trace always originate from a tool result and "
-            "carry the model version that produced them."
+            "Every number in a recommendation is checked against the tool "
+            "results that produced it. Figures that do not appear in any result "
+            "are flagged rather than removed."
         )
+
+
+def _render_recommendation(recommendation: dict[str, Any]) -> None:
+    if recommendation.get("requires_human_approval"):
+        st.warning(
+            "**Approval required.** The projected impact crosses the approval "
+            "threshold, so this recommendation is not cleared to act on."
+        )
+
+    st.markdown(f"### {recommendation['executive_summary']}")
+    if recommendation.get("root_cause"):
+        st.markdown(f"**Root cause.** {recommendation['root_cause']}")
+    st.markdown(f"**Recommended action.** {recommendation['recommended_action']}")
+
+    confidence = recommendation.get("confidence", 0.0)
+    st.progress(min(1.0, max(0.0, confidence)), text=f"Confidence {confidence:.0%}")
+
+    evidence = recommendation.get("evidence") or []
+    if evidence:
+        st.markdown("**Evidence**")
+        for item in evidence:
+            st.markdown(f"- `{item['source_tool']}` — {item['claim']}")
+
+    # Risks and assumptions are expanded by default, not tucked behind a
+    # collapsed section. They are the conditions under which the number above
+    # means what it says.
+    risks = recommendation.get("risks") or []
+    if risks:
+        st.markdown("**Risks and warnings**")
+        for risk in risks:
+            st.markdown(f"- {risk}")
+
+    assumptions = recommendation.get("assumptions") or []
+    if assumptions:
+        with st.expander(f"Assumptions ({len(assumptions)})"):
+            for assumption in assumptions:
+                st.markdown(f"- {assumption}")
+
+
+def _render_trace(events: list[dict[str, Any]]) -> None:
+    for event in events:
+        icon, label = _EVENT_STYLE.get(event["event_type"], ("•", event["event_type"]))
+        header = f"{icon} **{label}**"
+        if event.get("tool_name"):
+            header += f" · `{event['tool_name']}`"
+        st.markdown(f"{header} — {event['summary']}")
+
+        payload = event.get("payload") or {}
+        if payload:
+            with st.expander("Detail", expanded=False):
+                st.json(payload)
+
+
+def _render_feedback(investigation_id: str) -> None:
+    st.divider()
+    st.markdown("**Was this useful?**")
+    left, right = st.columns(2)
+    if left.button("👍 Helpful", key=f"up-{investigation_id}"):
+        _post("/feedback", {"investigation_id": investigation_id, "helpful": True})
+        st.success("Recorded.")
+    if right.button("👎 Not helpful", key=f"down-{investigation_id}"):
+        _post("/feedback", {"investigation_id": investigation_id, "helpful": False})
+        st.success("Recorded.")
 
 
 def main() -> None:
@@ -76,32 +182,46 @@ def main() -> None:
     st.caption("CPG/Retail revenue, pricing and promotion decision intelligence")
 
     _sidebar()
-    st.info(PLACEHOLDER_NOTICE)
 
-    st.subheader("Question")
-    st.text_input("Ask a business question", value=SAMPLE_QUESTION, disabled=True)
-
-    st.subheader("Investigation plan")
-    for i, step in enumerate(SAMPLE_PLAN, start=1):
-        st.markdown(f"**{i}. `{step['tool']}`** — {step['why']}")
-
-    st.subheader("Tool calls and results")
-    for entry in SAMPLE_RESULTS:
-        with st.expander(f"`{entry['tool']}` — {entry['duration_ms']} ms", expanded=False):
-            st.caption(f"model `{entry['model']}` · confidence {entry['confidence']}")
-            st.json(entry["result"])
-
-    st.subheader("Re-planning")
-    st.markdown(
-        "_No re-planning events in this sample. When the Critic finds evidence "
-        "insufficient, the revised plan and the reason for revision appear here._"
+    st.subheader("Ask a business question")
+    example = st.selectbox(
+        "Examples", ["(write your own)", *EXAMPLE_QUESTIONS], index=1
     )
+    default = "" if example == "(write your own)" else example
+    question = st.text_area("Question", value=default, height=90)
 
-    st.subheader("Critic verdict")
-    st.markdown("_Populated in Stage 1 Step 18._")
+    if st.button("Investigate", type="primary", disabled=not question.strip()):
+        with st.spinner("Planning, running tools, and checking the evidence..."):
+            answer = _post("/chat", {"question": question})
+        if answer:
+            st.session_state["last"] = answer
 
-    st.subheader("Recommendation")
-    st.markdown("_Populated in Stage 1 Step 18._")
+    result = st.session_state.get("last")
+    if not result:
+        st.info(
+            "Ask a question to run a live investigation. The third example is "
+            "one the platform deliberately cannot answer — no tool diagnoses "
+            "availability — so it shows what declining looks like."
+        )
+        return
+
+    st.divider()
+    recommendation = result.get("recommendation")
+    if recommendation:
+        _render_recommendation(recommendation)
+    else:
+        st.warning(result.get("answer", "No conclusion was reached."))
+
+    trace = _get(f"/investigation/{result['investigation_id']}/trace")
+    if trace and trace.get("events"):
+        st.divider()
+        st.subheader("How this answer was reached")
+        _render_trace(trace["events"])
+
+    _render_feedback(result["investigation_id"])
+    st.caption(
+        f"investigation `{result['investigation_id']}` · trace `{result['trace_id']}`"
+    )
 
 
 if __name__ == "__main__":

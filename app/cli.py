@@ -594,6 +594,66 @@ def prompts() -> None:
         typer.echo(f"{name:<20} {', '.join(versions) or '(none)'}")
 
 
+@app.command()
+def investigate(
+    question: str = typer.Argument(..., help="The business question to investigate."),
+    trace: bool = typer.Option(False, "--trace", help="Print the full agentic trace."),
+) -> None:
+    """Run one investigation and print the recommendation.
+
+    Goes through the same service the API and UI use, so a question answered
+    here is answered identically over HTTP.
+    """
+    configure_logging()
+    container = Container()
+    outcome = container.investigation_service.run(question)
+
+    typer.echo(f"\ninvestigation : {outcome.investigation_id}")
+    typer.echo(f"status        : {outcome.status.value}")
+    typer.echo(f"intent        : {outcome.intent or '-'}\n")
+
+    recommendation = outcome.recommendation
+    # An empty summary is treated as no recommendation. A model that returned
+    # nothing should print why the investigation came up short, not a run of
+    # blank lines under confident-looking headings.
+    if recommendation is None or not recommendation.executive_summary.strip():
+        typer.echo(outcome.answer)
+        for risk in recommendation.risks if recommendation else []:
+            typer.echo(f"  ! {risk}")
+        raise typer.Exit(code=1)
+
+    if recommendation.requires_human_approval:
+        typer.echo(
+            "APPROVAL REQUIRED - the projected impact crosses the threshold, so "
+            "this is not cleared to act on.\n"
+        )
+    typer.echo(recommendation.executive_summary)
+    if recommendation.root_cause:
+        typer.echo(f"\nRoot cause: {recommendation.root_cause}")
+    typer.echo(f"\nAction: {recommendation.recommended_action}")
+    typer.echo(f"Confidence: {recommendation.confidence:.0%}")
+
+    if recommendation.evidence:
+        typer.echo("\nEvidence:")
+        for item in recommendation.evidence:
+            typer.echo(f"  [{item.source_tool}] {item.claim}")
+
+    # Risks print by default rather than behind a flag. They are the conditions
+    # under which the numbers above mean what they say.
+    if recommendation.risks:
+        typer.echo("\nRisks and warnings:")
+        for risk in recommendation.risks:
+            typer.echo(f"  ! {risk}")
+
+    if trace:
+        typer.echo("\nTrace:")
+        for event in outcome.events:
+            typer.echo(
+                f"  {event.sequence:>2}. [{event.actor:<12}] "
+                f"{event.event_type:<20} {event.summary}"
+            )
+
+
 @app.command("evaluate-agent")
 def evaluate_agent(
     provider: str = typer.Option(

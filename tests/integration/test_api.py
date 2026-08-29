@@ -120,28 +120,47 @@ def test_inbound_trace_id_is_honoured(client: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    ("method", "path", "payload"),
+    ("path", "payload"),
     [
-        ("post", "/chat", {"question": "Why did revenue decline?"}),
-        ("post", "/investigate", {"question": "Why did revenue decline?"}),
-        ("post", "/scenario", {"description": "Raise price 5%"}),
-        ("get", "/investigation/abc", None),
-        ("get", "/investigation/abc/trace", None),
-        ("get", "/models", None),
-        ("post", "/feedback", {"investigation_id": "abc", "helpful": True}),
+        ("/investigation/abc", None),
+        ("/investigation/abc/trace", None),
     ],
 )
-def test_unimplemented_endpoints_return_501_naming_their_step(
-    client: TestClient, method: str, path: str, payload: dict[str, object] | None
+def test_an_unknown_investigation_is_a_404_not_a_501(
+    client: TestClient, path: str, payload: dict[str, object] | None
 ) -> None:
-    """A 501 that names the step is a roadmap; a 404 is just absence."""
-    response = getattr(client, method)(path, **({"json": payload} if payload else {}))
+    """These were 501 stubs until Step 14. Now the endpoints work and the id is
+    simply absent, which is a different answer and a different status."""
+    response = client.get(path)
 
-    assert response.status_code == 501
-    body = response.json()
-    assert body["error"] == "not_implemented"
-    assert body["implemented_in"]
-    assert body["trace_id"]
+    assert response.status_code == 404
+
+
+def test_only_models_can_still_return_501(client: TestClient) -> None:
+    """The documented surface is implemented as of Step 14, bar one.
+
+    ``GET /models`` keeps its 501 because the Databricks registry genuinely
+    raises: Unity Catalog model listing is Stage 2 work. Locally it answers "no
+    models registered" honestly instead. Pinned to exactly this one path so a
+    501 reappearing anywhere else fails here - the OpenAPI test below would not
+    catch it, because a regressed endpoint is still a documented one.
+    """
+    stubs = {
+        path
+        for path, methods in client.get("/openapi.json").json()["paths"].items()
+        for spec in methods.values()
+        if "501" in (spec.get("responses") or {})
+    }
+
+    assert stubs == {"/models"}, f"unexpected stubs: {stubs - {'/models'}}"
+
+
+def test_models_answers_locally_rather_than_stubbing(client: TestClient) -> None:
+    """The question is answerable and the answer is zero."""
+    response = client.get("/models")
+
+    assert response.status_code == 200
+    assert response.json()["models"] == []
 
 
 def test_all_documented_endpoints_appear_in_openapi(client: TestClient) -> None:

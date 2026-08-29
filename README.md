@@ -408,6 +408,56 @@ on it, which is the difference between "flagged for approval" and "gated on it".
 
 ---
 
+## Running it end to end
+
+```powershell
+uv run ari investigate "Did the promotion on product P00091 work?" --trace
+uv run uvicorn app.main:app --reload          # then http://127.0.0.1:8000/docs
+uv run streamlit run app/ui/streamlit_app.py  # in a second terminal
+```
+
+The CLI, the API and the UI all go through one `InvestigationService`, so a
+question answered in the terminal is answered identically over HTTP. **The UI
+talks HTTP rather than importing the container** — the shortcut would make it a
+second consumer of the internals rather than a client of the API, and an
+endpoint could then break without the demo noticing.
+
+| endpoint | what it does |
+|---|---|
+| `POST /chat` | ask a question, get an answer and a recommendation |
+| `POST /investigate` | same, with explicit product/store/date scope |
+| `GET /investigation/{id}` | fetch a past investigation |
+| `GET /investigation/{id}/trace` | how the answer was reached |
+| `POST /scenario` | project levers directly, no agent round trip |
+| `POST /feedback` | record whether a recommendation was useful |
+
+Three decisions worth stating.
+
+**An investigation that gathered no usable evidence is `failed`, not
+`completed`** — even though the graph ran to the end without raising.
+`completed` is a claim that the question was answered, and reporting an empty
+result as complete is how "we found nothing" gets mistaken for "there is no
+effect".
+
+**A failed investigation returns 200 with a `failed` status**, not a 5xx. The
+request was handled correctly; the investigation is what did not conclude. That
+distinction is what lets a caller tell "the platform is down" from "the evidence
+did not support an answer".
+
+**`POST /scenario` reports what it could not model rather than dropping it.**
+The API accepts an inventory lever and a promotion-spend amount that the
+scenario engine has no way to project; those come back as warnings instead of
+being silently ignored, because a projection that quietly dropped the change the
+caller asked about would answer a different question than the one posed.
+
+Investigations run synchronously. A background queue is the right answer at
+production volumes and the wrong one here — it would add a worker, a result
+store and a polling contract to serve a demo where the answer takes seconds.
+`GET /investigation/{id}` already exists, so going async is a change of caller
+behaviour rather than a rewrite.
+
+---
+
 ## Grading the agent
 
 ```powershell
@@ -507,14 +557,15 @@ named for — is brought forward.
 8 price elasticity, own + cross ✅ · 9 optimisation & scenario engine ✅ ·
 10 MLflow, Claude & stub providers ✅ · 11 LangGraph plan/act/observe loop ✅ ·
 12 Critic, re-planning, human-in-the-loop ✅ · 13 agent evaluation ✅ ·
-14 FastAPI & Streamlit · 15 Docker & end-to-end validation
+14 FastAPI & Streamlit ✅ · 15 Docker & end-to-end validation
 
 Step 4 onward consumes `features/datasets/` — each model gets a builder that
 already encodes its framing (which rows are eligible, what must be excluded to
 keep the estimate honest) and is scored against Step 2's hidden ground truth.
 
-Deferred from Step 3: the SQLite application-state store (investigations, traces,
-feedback) is not built yet — nothing writes to it until Step 14. `DATA_BACKEND=postgres`
+The SQLite application-state store (investigations, traces, feedback) was
+deferred from Step 3 and built in Step 14, once the API had investigations to
+record. `DATA_BACKEND=postgres`
 is documented as a switch point at `Container.data_repository` rather than
 implemented, since a second analytical backend has no consumer.
 

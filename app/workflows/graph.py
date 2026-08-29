@@ -417,16 +417,23 @@ def run_investigation(
     *,
     user_id: str | None = None,
     investigation_id: str | None = None,
+    trace_id: str | None = None,
 ) -> AgentState:
     """Run one investigation to completion.
 
     Wrapped in a trace context so every log line from every node - including
     inside tool execution - correlates to one investigation id.
+
+    ``trace_id`` is accepted rather than always minted here so a caller that has
+    already recorded one can supply it. A caller that writes its row first and
+    lets the graph mint a second id ends up with two records that cannot be
+    joined, which is a silent failure: both ids look valid.
     """
     state = new_agent_state(
         question,
         user_id=user_id,
         investigation_id=investigation_id,
+        trace_id=trace_id,
         max_replans=deps.max_replans,
     )
     graph = build_graph(deps)

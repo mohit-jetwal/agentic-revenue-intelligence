@@ -38,6 +38,7 @@ from app.observability.logging import get_logger
 from app.services.baseline_service import BaselineSalesService
 from app.services.elasticity_service import ElasticityService
 from app.services.forecast_service import ForecastingService
+from app.services.investigation_service import InvestigationService
 from app.services.model_registry import (
     DatabricksModelRegistry,
     MLflowModelRegistry,
@@ -45,6 +46,7 @@ from app.services.model_registry import (
 )
 from app.services.optimization_service import OptimizationService
 from app.services.promo_uplift_service import PromoUpliftService
+from app.store.investigations import InvestigationStore
 from app.tools.registry import ToolRegistry, build_default_registry
 from data.repositories.base import DataRepository
 from data.repositories.databricks import DatabricksDataRepository
@@ -242,6 +244,28 @@ class Container:
             optimization_service=self.optimization_service,
         )
 
+    # -- application state --------------------------------------------------
+
+    @cached_property
+    def investigation_store(self) -> InvestigationStore:
+        """Investigations, traces and feedback.
+
+        Deliberately separate from ``data_repository``: that one answers
+        analytical questions over Parquet, this one records what the application
+        did. Two engines, one job each.
+        """
+        return InvestigationStore(self.settings.data.app_database_url)
+
+    @cached_property
+    def investigation_service(self) -> InvestigationService:
+        """The seam between the agent graph and the API, CLI and UI."""
+        return InvestigationService(
+            provider=self.llm_provider,
+            registry=self.tool_registry,
+            store=self.investigation_store,
+            settings=self.settings.agent,
+        )
+
     # -- per-request objects ------------------------------------------------
 
     def new_budget_tracker(self) -> BudgetTracker:
@@ -275,6 +299,7 @@ class Container:
             # whole health endpoint down, which is precisely what this method
             # exists to prevent.
             ("tool_registry", lambda: (True, f"{len(self.tool_registry)} tools registered")),
+            ("investigation_store", lambda: self.investigation_store.health_check()),
         ]
         for name, probe in probes:
             try:
