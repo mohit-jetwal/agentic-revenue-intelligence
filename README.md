@@ -408,6 +408,66 @@ on it, which is the difference between "flagged for approval" and "gated on it".
 
 ---
 
+## Grading the agent
+
+```powershell
+uv run ari evaluate-agent --provider stub --detail   # offline, free, deterministic
+uv run ari evaluate-agent --provider claude          # costs money, hits the API
+```
+
+Every earlier step scored a *model* against ground truth. This scores the
+*agent*: whether it picks the right tools, gathers what it needs, reads the
+evidence the way the truth points, and declines when it cannot answer.
+
+**The questions are derived, not invented.** Step 2 recorded exactly which
+products, stores and windows each injected scenario touched, and
+[`evaluation/golden_set.py`](evaluation/golden_set.py) builds 20 questions from
+that record. A question written separately would be graded against an
+expectation written separately, which measures nothing.
+
+**Nine of the twenty are unanswerable, deliberately.** No registered tool
+diagnoses a stockout, a competitor price cut or a lost-distribution shock. For
+those the correct behaviour is to decline, and a confident answer is the
+failure — so they are scored on abstention instead of accuracy, and the coverage
+gap is reported rather than hidden by dropping the questions.
+
+**Four dimensions, never averaged into one.** Tool selection (with a penalty for
+fanning out), evidence, direction, abstention. An agent that selects perfectly
+and then writes an unsupported conclusion should not score the same as one that
+picks badly and reports honestly.
+
+**The floor is a keyword planner.** A stub run grades whatever the stub was
+scripted to return, so scripting the right answer would measure the person who
+wrote the script. Instead the stub follows a policy — regex over the question
+text, no reasoning — from
+[`evaluation/baseline_planner.py`](evaluation/baseline_planner.py). That makes
+the number a real measurement of a real, bad planner, and the bar a language
+model has to clear to justify its cost.
+
+Recorded in [`evaluation/baselines/`](evaluation/baselines/); `evaluate-agent`
+exits non-zero when a headline number falls more than 0.02 below it.
+
+| | keyword floor |
+|---|---|
+| answerable mean | 0.833 |
+| abstention mean | **0.000** |
+| tool selection | 1.000 |
+| direction | 0.773 |
+
+Two findings worth stating plainly. Keyword routing **matches a language model
+on tool selection** for well-posed single-capability questions — the LLM does not
+earn its place there. Where it does is the other two rows: the floor scores zero
+on abstention because knowing your own coverage requires judgement, and it takes
+half marks on the `bad_promo` trap, where uplift is genuinely positive and the
+right answer is still *don't repeat it*.
+
+The report also separates **artefact gaps** — a required tool that ran and found
+no trained series for that product — from planning errors. They have different
+fixes, and a data gap read as a reasoning gap sends the effort somewhere it
+cannot help.
+
+---
+
 ## Deliberate scope decisions
 
 Stated plainly, because "why isn't X here" is a fair question:
@@ -446,7 +506,7 @@ named for — is brought forward.
 4 baseline ✅ · 5–6 demand forecasting ✅ · 7 promo uplift ✅ ·
 8 price elasticity, own + cross ✅ · 9 optimisation & scenario engine ✅ ·
 10 MLflow, Claude & stub providers ✅ · 11 LangGraph plan/act/observe loop ✅ ·
-12 Critic, re-planning, human-in-the-loop ✅ · 13 agent evaluation ·
+12 Critic, re-planning, human-in-the-loop ✅ · 13 agent evaluation ✅ ·
 14 FastAPI & Streamlit · 15 Docker & end-to-end validation
 
 Step 4 onward consumes `features/datasets/` — each model gets a builder that

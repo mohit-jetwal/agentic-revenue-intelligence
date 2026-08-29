@@ -1,0 +1,463 @@
+{
+  "abstention_mean": 0.0,
+  "answerable_mean": 0.8333,
+  "artefact_gaps": {
+    "estimate_promo_uplift": 2,
+    "forecast_demand": 1
+  },
+  "by_label": {
+    "bad_promo": 0.5,
+    "competitor_price_cut": 0.0,
+    "price_increase": 1.0,
+    "product_launch": 0.6667,
+    "regional_shock": 0.0,
+    "seasonal_peak": 1.0,
+    "stockout": 0.0,
+    "successful_promo": 1.0
+  },
+  "coverage": {
+    "abstention_expected": 9,
+    "answerable": 11,
+    "coverage_gaps": {
+      "competitor_price_cut": 4,
+      "regional_shock": 1,
+      "stockout": 4
+    },
+    "labels": [
+      "bad_promo",
+      "competitor_price_cut",
+      "price_increase",
+      "product_launch",
+      "regional_shock",
+      "seasonal_peak",
+      "stockout",
+      "successful_promo"
+    ],
+    "questions": 20
+  },
+  "dimensions": {
+    "abstention": 0.0,
+    "direction": 0.7727,
+    "evidence": 0.7273,
+    "tool_selection": 1.0
+  },
+  "duration_seconds": 7.59,
+  "failures": {},
+  "generated_at": "2026-08-29T16:19:42.406174+00:00",
+  "provider": "stub+keyword",
+  "questions": 20,
+  "questions_detail": [
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 1.0,
+        "evidence": 1.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "price_increase",
+      "missing_tools": [],
+      "notes": [],
+      "overall": 1.0,
+      "question_id": "Q-A1",
+      "scenario_id": "A1",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_price_elasticity"
+      ]
+    },
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 1.0,
+        "evidence": 1.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "price_increase",
+      "missing_tools": [],
+      "notes": [],
+      "overall": 1.0,
+      "question_id": "Q-A2",
+      "scenario_id": "A2",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_price_elasticity"
+      ]
+    },
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 1.0,
+        "evidence": 1.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "price_increase",
+      "missing_tools": [],
+      "notes": [],
+      "overall": 1.0,
+      "question_id": "Q-A3",
+      "scenario_id": "A3",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_price_elasticity"
+      ]
+    },
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 1.0,
+        "evidence": 1.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "successful_promo",
+      "missing_tools": [],
+      "notes": [],
+      "overall": 1.0,
+      "question_id": "Q-B1",
+      "scenario_id": "B1",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_promo_uplift"
+      ]
+    },
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 1.0,
+        "evidence": 1.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "successful_promo",
+      "missing_tools": [],
+      "notes": [],
+      "overall": 1.0,
+      "question_id": "Q-B2",
+      "scenario_id": "B2",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_promo_uplift"
+      ]
+    },
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 1.0,
+        "evidence": 1.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "successful_promo",
+      "missing_tools": [],
+      "notes": [],
+      "overall": 1.0,
+      "question_id": "Q-B3",
+      "scenario_id": "B3",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_promo_uplift"
+      ]
+    },
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 0.5,
+        "evidence": 1.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "bad_promo",
+      "missing_tools": [],
+      "notes": [],
+      "overall": 0.8333,
+      "question_id": "Q-C1",
+      "scenario_id": "C1",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_promo_uplift"
+      ]
+    },
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 0.0,
+        "evidence": 0.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "bad_promo",
+      "missing_tools": [],
+      "notes": [
+        "estimate_promo_uplift was called and had no data for this product/window - an artefact coverage gap, not a planning error"
+      ],
+      "overall": 0.3333,
+      "question_id": "Q-C2",
+      "scenario_id": "C2",
+      "starved_tools": [
+        "estimate_promo_uplift"
+      ],
+      "tools_called": [
+        "estimate_promo_uplift"
+      ]
+    },
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 0.0,
+        "evidence": 0.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "bad_promo",
+      "missing_tools": [],
+      "notes": [
+        "estimate_promo_uplift was called and had no data for this product/window - an artefact coverage gap, not a planning error"
+      ],
+      "overall": 0.3333,
+      "question_id": "Q-C3",
+      "scenario_id": "C3",
+      "starved_tools": [
+        "estimate_promo_uplift"
+      ],
+      "tools_called": [
+        "estimate_promo_uplift"
+      ]
+    },
+    {
+      "answerable": false,
+      "confidence": 0.75,
+      "dimensions": {
+        "abstention": 0.0
+      },
+      "extra_tools": [],
+      "label": "stockout",
+      "missing_tools": [],
+      "notes": [
+        "answered at confidence 0.75 on a question the registered tools cannot establish"
+      ],
+      "overall": 0.0,
+      "question_id": "Q-D1",
+      "scenario_id": "D1",
+      "starved_tools": [],
+      "tools_called": [
+        "forecast_demand"
+      ]
+    },
+    {
+      "answerable": false,
+      "confidence": 0.75,
+      "dimensions": {
+        "abstention": 0.0
+      },
+      "extra_tools": [],
+      "label": "stockout",
+      "missing_tools": [],
+      "notes": [
+        "answered at confidence 0.75 on a question the registered tools cannot establish"
+      ],
+      "overall": 0.0,
+      "question_id": "Q-D2",
+      "scenario_id": "D2",
+      "starved_tools": [],
+      "tools_called": [
+        "forecast_demand"
+      ]
+    },
+    {
+      "answerable": false,
+      "confidence": 0.75,
+      "dimensions": {
+        "abstention": 0.0
+      },
+      "extra_tools": [],
+      "label": "stockout",
+      "missing_tools": [],
+      "notes": [
+        "answered at confidence 0.75 on a question the registered tools cannot establish"
+      ],
+      "overall": 0.0,
+      "question_id": "Q-D3",
+      "scenario_id": "D3",
+      "starved_tools": [],
+      "tools_called": [
+        "forecast_demand"
+      ]
+    },
+    {
+      "answerable": false,
+      "confidence": 0.75,
+      "dimensions": {
+        "abstention": 0.0
+      },
+      "extra_tools": [],
+      "label": "stockout",
+      "missing_tools": [],
+      "notes": [
+        "answered at confidence 0.75 on a question the registered tools cannot establish"
+      ],
+      "overall": 0.0,
+      "question_id": "Q-D4",
+      "scenario_id": "D4",
+      "starved_tools": [],
+      "tools_called": [
+        "forecast_demand"
+      ]
+    },
+    {
+      "answerable": false,
+      "confidence": 0.75,
+      "dimensions": {
+        "abstention": 0.0
+      },
+      "extra_tools": [],
+      "label": "competitor_price_cut",
+      "missing_tools": [],
+      "notes": [
+        "answered at confidence 0.75 on a question the registered tools cannot establish"
+      ],
+      "overall": 0.0,
+      "question_id": "Q-E1",
+      "scenario_id": "E1",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_price_elasticity"
+      ]
+    },
+    {
+      "answerable": false,
+      "confidence": 0.75,
+      "dimensions": {
+        "abstention": 0.0
+      },
+      "extra_tools": [],
+      "label": "competitor_price_cut",
+      "missing_tools": [],
+      "notes": [
+        "answered at confidence 0.75 on a question the registered tools cannot establish"
+      ],
+      "overall": 0.0,
+      "question_id": "Q-E2",
+      "scenario_id": "E2",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_price_elasticity"
+      ]
+    },
+    {
+      "answerable": false,
+      "confidence": 0.75,
+      "dimensions": {
+        "abstention": 0.0
+      },
+      "extra_tools": [],
+      "label": "competitor_price_cut",
+      "missing_tools": [],
+      "notes": [
+        "answered at confidence 0.75 on a question the registered tools cannot establish"
+      ],
+      "overall": 0.0,
+      "question_id": "Q-E3",
+      "scenario_id": "E3",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_price_elasticity"
+      ]
+    },
+    {
+      "answerable": false,
+      "confidence": 0.75,
+      "dimensions": {
+        "abstention": 0.0
+      },
+      "extra_tools": [],
+      "label": "competitor_price_cut",
+      "missing_tools": [],
+      "notes": [
+        "answered at confidence 0.75 on a question the registered tools cannot establish"
+      ],
+      "overall": 0.0,
+      "question_id": "Q-E4",
+      "scenario_id": "E4",
+      "starved_tools": [],
+      "tools_called": [
+        "estimate_price_elasticity"
+      ]
+    },
+    {
+      "answerable": false,
+      "confidence": 0.75,
+      "dimensions": {
+        "abstention": 0.0
+      },
+      "extra_tools": [],
+      "label": "regional_shock",
+      "missing_tools": [],
+      "notes": [
+        "answered at confidence 0.75 on a question the registered tools cannot establish"
+      ],
+      "overall": 0.0,
+      "question_id": "Q-H1",
+      "scenario_id": "H1",
+      "starved_tools": [],
+      "tools_called": [
+        "forecast_demand"
+      ]
+    },
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 1.0,
+        "evidence": 1.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "seasonal_peak",
+      "missing_tools": [],
+      "notes": [],
+      "overall": 1.0,
+      "question_id": "Q-I1",
+      "scenario_id": "I1",
+      "starved_tools": [],
+      "tools_called": [
+        "forecast_demand"
+      ]
+    },
+    {
+      "answerable": true,
+      "confidence": 0.75,
+      "dimensions": {
+        "direction": 1.0,
+        "evidence": 0.0,
+        "tool_selection": 1.0
+      },
+      "extra_tools": [],
+      "label": "product_launch",
+      "missing_tools": [],
+      "notes": [
+        "forecast_demand was called and had no data for this product/window - an artefact coverage gap, not a planning error"
+      ],
+      "overall": 0.6667,
+      "question_id": "Q-J1",
+      "scenario_id": "J1",
+      "starved_tools": [
+        "forecast_demand"
+      ],
+      "tools_called": [
+        "forecast_demand"
+      ]
+    }
+  ]
+}

@@ -594,6 +594,114 @@ def prompts() -> None:
         typer.echo(f"{name:<20} {', '.join(versions) or '(none)'}")
 
 
+@app.command("evaluate-agent")
+def evaluate_agent(
+    provider: str = typer.Option(
+        "stub",
+        help="stub (offline keyword baseline) or claude (costs money, hits the API).",
+    ),
+    update_baseline: bool = typer.Option(
+        False, "--update-baseline", help="Record this run as the committed baseline."
+    ),
+    detail: bool = typer.Option(False, "--detail", help="Print every question."),
+    output: str | None = typer.Option(None, help="Write the full report as JSON here."),
+) -> None:
+    """Score the agent against the golden set derived from injected scenarios.
+
+    The stub run is offline, free and deterministic, and measures the *harness*
+    plus a deliberately weak keyword planner - it is the floor, not a benchmark.
+    The claude run is the capability measurement.
+    """
+    import json as _json
+    from pathlib import Path as _Path
+
+    from app.llm.stub import StubProvider
+    from evaluation.baseline_planner import KeywordBaseline
+    from evaluation.golden_set import load_golden_set
+    from evaluation.runner import (
+        compare_to_baseline,
+        load_baseline,
+        run_golden_set,
+        write_baseline,
+    )
+
+    configure_logging()
+    container = Container()
+    registry = container.tool_registry
+    questions = load_golden_set()
+
+    if provider == "stub":
+        stub = StubProvider()
+        KeywordBaseline(available_tools=set(registry.names())).script(
+            stub, list(questions)
+        )
+        llm: Any = stub
+        name = "stub+keyword"
+    elif provider == "claude":
+        llm = container.llm_provider
+        name = llm.model_name
+    else:
+        typer.echo(f"unknown provider '{provider}'. Use 'stub' or 'claude'.")
+        raise typer.Exit(code=2)
+
+    typer.echo(f"Running {len(questions)} golden questions against {name}...\n")
+    run = run_golden_set(llm, registry, questions=questions, provider_name=name)
+    report = run.as_dict()
+
+    coverage = report["coverage"]
+    typer.echo(
+        f"coverage         : {coverage['answerable']} answerable, "
+        f"{coverage['abstention_expected']} expect abstention"
+    )
+    typer.echo(f"answerable mean  : {report['answerable_mean']:.3f}")
+    typer.echo(f"abstention mean  : {report['abstention_mean']:.3f}")
+    if report["artefact_gaps"]:
+        gaps = ", ".join(f"{k} x{v}" for k, v in report["artefact_gaps"].items())
+        typer.echo(f"artefact gaps    : {gaps}")
+        typer.echo(
+            "                   (tools ran and found no data for that "
+            "product/window - retrain, not re-prompt)"
+        )
+    typer.echo("")
+    for dimension, value in report["dimensions"].items():
+        typer.echo(f"  {dimension:<16} {value:.3f}")
+    typer.echo("")
+    for label, value in report["by_label"].items():
+        typer.echo(f"  {label:<22} {value:.3f}")
+
+    if run.failures:
+        typer.echo("")
+        for question_id, error in run.failures.items():
+            typer.echo(f"  ! {question_id}: {error}")
+
+    if detail:
+        typer.echo("")
+        for score in report["questions_detail"]:
+            typer.echo(f"{score['question_id']:<8} {score['overall']:.2f}  {score['label']}")
+            for note in score["notes"]:
+                typer.echo(f"         - {note}")
+
+    if output:
+        _Path(output).write_text(_json.dumps(report, indent=2), encoding="utf-8")
+        typer.echo(f"\nreport written to {output}")
+
+    if update_baseline:
+        path = write_baseline(run)
+        typer.echo(f"\nbaseline updated: {path}")
+        return
+
+    regressions = compare_to_baseline(run, load_baseline(name))
+    if regressions:
+        typer.echo("\nREGRESSIONS against the committed baseline:")
+        for regression in regressions:
+            typer.echo(
+                f"  {regression.dimension:<24} "
+                f"{regression.baseline:.3f} -> {regression.current:.3f} "
+                f"({regression.delta:+.3f})"
+            )
+        raise typer.Exit(code=1)
+
+
 def main() -> None:
     app()
 
