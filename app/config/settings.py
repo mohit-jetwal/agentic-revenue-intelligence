@@ -51,6 +51,10 @@ class Environment(StrEnum):
 
 class LLMProviderName(StrEnum):
     CLAUDE = "claude"
+    #: Deterministic, offline, free. The default for tests and CI: an agent
+    #: suite that costs money per run gets run less often, and a
+    #: non-deterministic one produces failures nobody can reproduce.
+    STUB = "stub"
 
 
 class VectorStoreBackend(StrEnum):

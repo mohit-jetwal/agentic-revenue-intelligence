@@ -22,7 +22,13 @@ from __future__ import annotations
 
 from functools import cached_property
 
-from app.config.settings import Environment, Settings, VectorStoreBackend, get_settings
+from app.config.settings import (
+    Environment,
+    LLMProviderName,
+    Settings,
+    VectorStoreBackend,
+    get_settings,
+)
 from app.guardrails.budget import BudgetTracker
 from app.llm.base import LLMProvider
 from app.llm.claude import ClaudeProvider
@@ -201,12 +207,19 @@ class Container:
 
     @cached_property
     def llm_provider(self) -> LLMProvider:
-        """The reasoning model.
+        """The reasoning model, chosen by ``LLM__PROVIDER``.
 
-        Identical in both environments - Claude is reached over the Anthropic
-        API either way. Kept in the container so evaluation runs can substitute
-        a recorded provider without touching agent code.
+        Claude is reached over the Anthropic API in both environments. The stub
+        is deterministic and offline, and is what tests, CI and the golden-set
+        evaluation run against - the substitution the abstraction was built for.
+
+        The provider is selected here rather than inside agent code so that
+        swapping it never touches a graph node.
         """
+        if self.settings.llm.provider is LLMProviderName.STUB:
+            from app.llm.stub import StubProvider
+
+            return StubProvider(settings=self.settings.llm)
         return ClaudeProvider(self.settings.llm)
 
     # -- tools --------------------------------------------------------------
