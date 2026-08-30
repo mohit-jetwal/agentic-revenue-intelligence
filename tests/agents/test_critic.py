@@ -450,6 +450,68 @@ class TestBoundedReplanning:
         )
 
 
+class TestModelRouting:
+    """`planner_model` was configured, printed by the CLI and reported by the
+    health check for four steps while no call site used it. These pin the wiring
+    so it cannot quietly become decoration again."""
+
+    def test_planning_uses_the_planner_model(self) -> None:
+        registry = ToolRegistry()
+        registry.register(UpliftTool())
+        stub = StubProvider()
+        stub.script_structured(
+            IntentClassification(
+                intent=IntentType.PROMOTION_DECISION,
+                objective=BusinessObjective.MAXIMISE_PROFIT,
+            )
+        )
+        stub.script_structured(ProposedPlan(steps=[]))
+        supervisor = SupervisorAgent(provider=stub, tools=registry.specs())
+
+        supervisor.plan("q", supervisor.classify("q"))
+
+        planned = next(c for c in stub.calls if c["model"] == "ProposedPlan")
+        assert planned["use_planner"] is True
+
+    def test_classification_stays_on_the_worker_model(self) -> None:
+        """Constrained enough that a stronger model has little room to be
+        better, and it runs on every single question."""
+        stub = StubProvider()
+        stub.script_structured(
+            IntentClassification(
+                intent=IntentType.FORECAST, objective=BusinessObjective.MAXIMISE_VOLUME
+            )
+        )
+        SupervisorAgent(provider=stub, tools=[]).classify("q")
+
+        assert stub.calls[0]["use_planner"] is False
+
+    def test_the_critic_uses_the_planner_model(self) -> None:
+        stub = StubProvider()
+        stub.script_structured(CriticAssessment(sufficient=True, confidence=0.9))
+        CriticAgent(provider=stub).review("q", [uplift_result()])
+
+        assert stub.calls[0]["use_planner"] is True
+
+    def test_drafting_stays_on_the_worker_model(self) -> None:
+        stub = StubProvider()
+        stub.script_structured(
+            DraftRecommendation(
+                executive_summary="s", recommended_action="a", confidence=0.7
+            )
+        )
+        RecommendationAgent(provider=stub).synthesise("q", [uplift_result()])
+
+        assert stub.calls[0]["use_planner"] is False
+
+    def test_a_provider_without_a_planner_falls_back_to_its_model(self) -> None:
+        """The ABC default. A provider with one model is not forced to invent a
+        second just to satisfy the interface."""
+        stub = StubProvider()
+
+        assert stub.planner_model_name == stub.model_name
+
+
 class TestHumanApproval:
     """The interrupt is what makes approval a gate rather than a label."""
 

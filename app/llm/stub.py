@@ -128,8 +128,18 @@ class StubProvider(LLMProvider):
         system: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        use_planner: bool = False,
     ) -> tuple[TModel, LLMResponse]:
-        self._record("complete_structured", messages, system, model=response_model.__name__)
+        # `use_planner` is recorded rather than acted on: the stub has one
+        # model. Recording it is what lets a test assert that planning routes to
+        # the planner without anyone paying for two real models to find out.
+        self._record(
+            "complete_structured",
+            messages,
+            system,
+            model=response_model.__name__,
+            use_planner=use_planner,
+        )
 
         scripted = self._match(self._scripted.get(response_model.__name__, []), messages)
         if scripted is not None:

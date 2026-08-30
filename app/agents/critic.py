@@ -104,6 +104,11 @@ class CriticAgent:
             [Message(role="user", content=message)],
             CriticAssessment,
             system=self.system_prompt,
+            # The Critic decides whether the investigation continues, so its
+            # judgement compounds the same way the plan's does. Classification
+            # and drafting stay on the worker model: both are constrained
+            # enough that the stronger model has little room to be better.
+            use_planner=True,
         )
 
         issues = mechanical + list(assessment.issues)

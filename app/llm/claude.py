@@ -127,6 +127,7 @@ class ClaudeProvider(LLMProvider):
         system: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        use_planner: bool = False,
     ) -> tuple[TModel, LLMResponse]:
         """Completion validated against a Pydantic model.
 
@@ -141,6 +142,7 @@ class ClaudeProvider(LLMProvider):
             system=system,
             max_tokens=max_tokens,
             temperature=temperature,
+            use_planner=use_planner,
             tools=[
                 {
                     "name": _STRUCTURED_TOOL,
@@ -210,9 +212,12 @@ class ClaudeProvider(LLMProvider):
         temperature: float | None,
         tools: list[dict[str, Any]] | None = None,
         tool_choice: dict[str, Any] | None = None,
+        use_planner: bool = False,
     ) -> Any:
         payload: dict[str, Any] = {
-            "model": self._settings.model,
+            "model": (
+                self._settings.planner_model if use_planner else self._settings.model
+            ),
             "max_tokens": max_tokens or self._settings.max_tokens,
             "temperature": (
                 temperature if temperature is not None else self._settings.temperature

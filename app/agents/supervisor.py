@@ -130,6 +130,10 @@ class SupervisorAgent:
             ))],
             ProposedPlan,
             system=self.system_prompt,
+            # The one call where a stronger model clearly pays for itself: a bad
+            # plan wastes every tool call that follows it, and tool calls are
+            # far more expensive than the token difference.
+            use_planner=True,
         )
         return self._validate(proposal, classification, previous, replan_reason)
 

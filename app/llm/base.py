@@ -102,6 +102,15 @@ class LLMProvider(ABC):
     def model_name(self) -> str:
         """Identifier of the model in use. Recorded in traces."""
 
+    @property
+    def planner_model_name(self) -> str:
+        """Model used where reasoning quality matters most.
+
+        Defaults to ``model_name``, so a provider with no separate planner is
+        not forced to invent one.
+        """
+        return self.model_name
+
     @abstractmethod
     def complete(
         self,
@@ -122,6 +131,7 @@ class LLMProvider(ABC):
         system: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        use_planner: bool = False,
     ) -> tuple[TModel, LLMResponse]:
         """Completion validated against a Pydantic model.
 
@@ -129,6 +139,12 @@ class LLMProvider(ABC):
         anywhere downstream code branches on the model's answer. Returning a
         validated object rather than text is what stops a malformed plan from
         propagating into the graph as a string that nobody checked.
+
+        ``use_planner`` routes the call to ``planner_model_name`` instead of
+        ``model_name``. Set it where the quality of the *decision* dominates the
+        cost of the call - choosing which tools to run, and judging whether the
+        evidence is sufficient. A bad plan wastes every tool call that follows
+        it, so it is the one place a more capable model pays for itself.
         """
 
     @abstractmethod
