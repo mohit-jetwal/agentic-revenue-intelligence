@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from app.config.settings import LLMSettings
 from app.llm.base import (
     LLMNotConfiguredError,
+    LLMRefusalError,
     LLMResponseError,
     LLMTimeoutError,
     Message,
@@ -47,7 +48,11 @@ class Answer(BaseModel):
 
 
 def fake_message(
-    *, text: str = "", tool_use: dict[str, Any] | None = None, stop: str = "end_turn"
+    *,
+    text: str = "",
+    tool_use: dict[str, Any] | None = None,
+    stop: str = "end_turn",
+    stop_details: dict[str, str] | None = None,
 ) -> SimpleNamespace:
     """A stand-in for the SDK's response object."""
     content: list[SimpleNamespace] = []
@@ -65,6 +70,7 @@ def fake_message(
     return SimpleNamespace(
         content=content,
         stop_reason=stop,
+        stop_details=SimpleNamespace(**stop_details) if stop_details else None,
         model="claude-sonnet-5",
         usage=SimpleNamespace(
             input_tokens=120,
@@ -158,6 +164,30 @@ class TestStructuredOutput:
         with pytest.raises(LLMResponseError, match="no emit_structured_response"):
             provider.complete_structured([Message(role="user", content="x")], Answer)
 
+    def test_a_refusal_is_a_clear_error_not_a_validation_dump(self) -> None:
+        """A refusal is the model declining the request, not the schema failing
+        to constrain a response. Retrying the identical call fails identically,
+        so the caller needs to know *why*, not see a Pydantic error about
+        missing fields that were never going to be there."""
+        provider, _ = provider_with(
+            fake_message(
+                tool_use={
+                    "name": "emit_structured_response",
+                    "input": {"rationale": "partial"},
+                },
+                stop="refusal",
+                stop_details={
+                    "category": "reasoning_extraction",
+                    "explanation": "asked to reproduce internal reasoning",
+                },
+            )
+        )
+        with pytest.raises(LLMRefusalError) as excinfo:
+            provider.complete_structured([Message(role="user", content="x")], Answer)
+
+        assert excinfo.value.category == "reasoning_extraction"
+        assert "reproduce internal reasoning" in (excinfo.value.explanation or "")
+
     def test_invalid_content_fails_validation(self) -> None:
         """The schema constrains shape, not every constraint. A bounded float is
         exactly the sort of rule JSON schema cannot always express."""
@@ -201,6 +231,26 @@ class TestPromptCaching:
         assert "system" not in client.payload
 
 
+class TestNoSamplingTemperature:
+    """The Claude 5 family's `Messages.create()` does not declare a
+    `temperature` parameter at all - passing one is a client-side `TypeError`
+    raised before any request is sent. `temperature` stays an accepted argument
+    on every public method for ABC and stub parity; it must simply never reach
+    the wire."""
+
+    def test_temperature_never_reaches_the_payload(self) -> None:
+        provider, client = provider_with(fake_message())
+        provider.complete([Message(role="user", content="q")], temperature=0.7)
+
+        assert "temperature" not in client.payload
+
+    def test_the_default_settings_temperature_is_also_withheld(self) -> None:
+        provider, client = provider_with(fake_message())
+        provider.complete([Message(role="user", content="q")])
+
+        assert "temperature" not in client.payload
+
+
 class TestResponseNormalisation:
     def test_text_and_tool_calls_are_separated(self) -> None:
         provider, _ = provider_with(
@@ -238,7 +288,11 @@ class TestResponseNormalisation:
 
 class TestErrors:
     def test_missing_key_names_the_offline_option(self) -> None:
-        provider = ClaudeProvider(LLMSettings())
+        # `_env_file=None`: a bare `LLMSettings()` reads the real `.env` file
+        # directly, independent of `os.environ`, so this test's premise - no
+        # key configured - would silently stop holding on any machine where a
+        # developer has actually set one up.
+        provider = ClaudeProvider(LLMSettings(_env_file=None))  # type: ignore[call-arg]
         with pytest.raises(LLMNotConfiguredError, match="LLM__PROVIDER=stub"):
             provider._require_key()
 
@@ -256,7 +310,7 @@ class TestErrors:
             provider.complete([Message(role="user", content="q")])
 
     def test_health_check_makes_no_network_call(self) -> None:
-        ok, detail = ClaudeProvider(LLMSettings()).health_check()
+        ok, detail = ClaudeProvider(LLMSettings(_env_file=None)).health_check()  # type: ignore[call-arg]
         assert not ok
         assert "stub" in detail
 

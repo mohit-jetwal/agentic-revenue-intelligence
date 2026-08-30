@@ -53,7 +53,14 @@ class IntentClassification(BaseModel):
     #: Products, stores, regions or categories named in the question. Extracted
     #: so a plan can scope its tool calls rather than running platform-wide.
     entities: dict[str, list[str]] = Field(default_factory=dict)
-    reasoning: str = ""
+    #: A one-sentence business note for the trace, not a reasoning trace itself -
+    #: a bare field named "reasoning" reads to the model as a request to
+    #: reproduce its internal reasoning in the response, which the Claude 5
+    #: family can refuse outright (category `reasoning_extraction`). Named and
+    #: described to stay clear of that.
+    rationale: str = Field(
+        default="", description="One-sentence note on the classification, for the trace."
+    )
 
 
 class PlannedStep(BaseModel):
@@ -68,7 +75,10 @@ class ProposedPlan(BaseModel):
     """The model's plan, before validation against the registry."""
 
     steps: list[PlannedStep] = Field(default_factory=list)
-    reasoning: str = ""
+    #: See `IntentClassification.rationale` on why this is not called "reasoning".
+    rationale: str = Field(
+        default="", description="One-sentence note on the plan, for the trace."
+    )
 
 
 @dataclass

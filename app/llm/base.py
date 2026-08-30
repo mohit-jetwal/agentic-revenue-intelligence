@@ -41,6 +41,22 @@ class LLMResponseError(LLMError):
     """Raised when the response could not be parsed into the requested shape."""
 
 
+class LLMRefusalError(LLMResponseError):
+    """Raised when the model declines to answer rather than producing malformed
+    output.
+
+    Kept distinct from a generic parse failure because the cause and the fix are
+    different: a refusal is the model's safety layer declining the *request*, not
+    the schema failing to constrain a *response*. Retrying the identical call
+    will fail identically; the prompt or schema needs to change.
+    """
+
+    def __init__(self, message: str, *, category: str | None, explanation: str | None) -> None:
+        super().__init__(message)
+        self.category = category
+        self.explanation = explanation
+
+
 @dataclass(frozen=True)
 class TokenUsage:
     input_tokens: int = 0
@@ -81,6 +97,11 @@ class LLMResponse:
     model: str | None = None
     #: Identifier of the prompt version used, for reproducibility.
     prompt_version: str | None = None
+    #: Populated only when `stop_reason == "refusal"`. The policy category and a
+    #: model-authored explanation of why - not business content, so logging it
+    #: does not violate the "never log message content" rule elsewhere here.
+    refusal_category: str | None = None
+    refusal_explanation: str | None = None
 
     @property
     def wants_tools(self) -> bool:

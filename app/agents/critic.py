@@ -61,7 +61,14 @@ class CriticAssessment(BaseModel):
     #: What would close the gap. Read verbatim by the Supervisor on a re-plan,
     #: so vagueness here produces a repeat of the same steps.
     required_followup: list[str] = Field(default_factory=list)
-    reasoning: str = ""
+    #: A one-sentence business note, not a chain-of-thought dump - see
+    #: `app.agents.supervisor.IntentClassification.rationale` for why a bare
+    #: field named "reasoning" is actively dangerous here: it reads to the
+    #: model as a request to reproduce its internal reasoning in the response,
+    #: which the Claude 5 family can refuse outright.
+    rationale: str = Field(
+        default="", description="One-sentence note on the verdict, for the trace."
+    )
 
 
 @dataclass

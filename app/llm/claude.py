@@ -35,6 +35,7 @@ from app.config.settings import LLMSettings
 from app.llm.base import (
     LLMNotConfiguredError,
     LLMProvider,
+    LLMRefusalError,
     LLMResponse,
     LLMResponseError,
     LLMTimeoutError,
@@ -157,6 +158,18 @@ class ClaudeProvider(LLMProvider):
         )
         response = self._to_response(raw)
 
+        if response.stop_reason == "refusal":
+            # The model declined the request rather than failing to fill the
+            # schema. Whatever partial tool-call arguments came back are not a
+            # malformed answer to validate - they are debris from a request the
+            # model chose not to complete, and validating them produces a
+            # confusing Pydantic dump that points at the wrong problem.
+            raise LLMRefusalError(
+                f"the model refused to answer (category={response.refusal_category})",
+                category=response.refusal_category,
+                explanation=response.refusal_explanation,
+            )
+
         payload = next(
             (call.arguments for call in response.tool_calls if call.name == _STRUCTURED_TOOL),
             None,
@@ -214,14 +227,21 @@ class ClaudeProvider(LLMProvider):
         tool_choice: dict[str, Any] | None = None,
         use_planner: bool = False,
     ) -> Any:
+        # `temperature` is accepted on every public method for ABC and stub
+        # parity, but the Claude 5 family has no sampling-temperature control -
+        # `Messages.create()` does not declare the parameter, and passing it
+        # raises a client-side TypeError before any request is sent (confirmed:
+        # the installed SDK has no reference to "temperature" anywhere in its
+        # source). Reasoning effort, not temperature, is now the lever; that is
+        # a genuinely different knob and not something to invent a mapping for
+        # here without it being asked for.
+        del temperature
+
         payload: dict[str, Any] = {
             "model": (
                 self._settings.planner_model if use_planner else self._settings.model
             ),
             "max_tokens": max_tokens or self._settings.max_tokens,
-            "temperature": (
-                temperature if temperature is not None else self._settings.temperature
-            ),
             "messages": [{"role": m.role, "content": m.content} for m in messages],
         }
 
@@ -279,7 +299,19 @@ class ClaudeProvider(LLMProvider):
             cache_write_tokens=int(getattr(raw_usage, "cache_creation_input_tokens", 0) or 0),
         )
 
-        # Token counts, model and stop reason only. Never message content.
+        # `stop_details` is only populated on a refusal. Extracted before
+        # logging so the category is visible without a second round trip to
+        # reproduce the failure - `category` and `explanation` are the model's
+        # policy classification, not the business content of the conversation,
+        # so surfacing them does not conflict with "never log message content".
+        stop_details = getattr(raw, "stop_details", None)
+        refusal_category = (
+            str(getattr(stop_details, "category", "")) or None if stop_details else None
+        )
+        refusal_explanation = (
+            str(getattr(stop_details, "explanation", "")) or None if stop_details else None
+        )
+
         logger.info(
             "llm.response",
             model=str(getattr(raw, "model", self._settings.model)),
@@ -288,6 +320,8 @@ class ClaudeProvider(LLMProvider):
             output_tokens=usage.output_tokens,
             cache_read_tokens=usage.cache_read_tokens,
             tool_calls=len(tool_calls),
+            refusal_category=refusal_category,
+            refusal_explanation=refusal_explanation,
         )
 
         return LLMResponse(
@@ -296,6 +330,8 @@ class ClaudeProvider(LLMProvider):
             tool_calls=tool_calls,
             stop_reason=str(getattr(raw, "stop_reason", "") or ""),
             model=str(getattr(raw, "model", self._settings.model)),
+            refusal_category=refusal_category,
+            refusal_explanation=refusal_explanation,
         )
 
     def count_tokens(self, text: str) -> int:
