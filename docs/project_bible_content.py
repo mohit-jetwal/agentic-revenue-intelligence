@@ -61,6 +61,8 @@ def front_matter(doc: Document) -> None:
             ["Gates", "ruff · mypy (183 files, strict) · bandit — all clean"],
             ["Dataset", "23.6M rows, causally simulated, hidden ground truth"],
             ["Validation", "Uplift recovers truth to 0.7pp across 4,417 events"],
+            ["LLMOps", "MLflow, versioned prompts, golden-set regression gate, HITL"],
+            ["Databricks", "Designed against, seams proven; not deployed (Ch. 14)"],
         ],
         [1.8, 4.6],
     )
@@ -1882,7 +1884,438 @@ def chapter_13(doc: Document) -> None:
 
 
 def chapter_14(doc: Document) -> None:
-    heading(doc, "14 — The Defence: Limitations and Trade-offs", 1)
+    heading(doc, "14 — LLMOps and the Databricks Lakehouse", 1)
+    caption(
+        doc,
+        "Read the first section before using any of this. The line between what "
+        "runs and what is designed is the thing an interviewer will test.",
+    )
+
+    heading(doc, "The line you must not cross", 2)
+    flag(
+        doc,
+        "The LLMOps PRACTICES are built and running. The DATABRICKS SUBSTRATE is "
+        "designed against, with the seams proven. Those are different claims.",
+    )
+    para(
+        doc,
+        "Every Databricks class in this repository exists with a **raising "
+        "body**: `DatabricksDataRepository`, `DatabricksModelRegistry`, "
+        "`DatabricksFeatureRepository`, `DatabricksVectorSearchStore`. Anyone who "
+        "opens the repo finds that in about ninety seconds, so the claim has to "
+        "be shaped correctly before they do.",
+    )
+    para(
+        doc,
+        "The good news is that the honest version is *stronger*, because it is "
+        "the version that survives the follow-up question. The practices — "
+        "experiment tracking, model versioning, prompt versioning, agent "
+        "evaluation with a regression gate, guardrails, human-in-the-loop, "
+        "observability, an approval gate before a model can serve — are all "
+        "implemented and measurable. They run on local MLflow rather than "
+        "Databricks MLflow, and **the difference is one environment variable**, "
+        "because the seam was built for it.",
+    )
+
+    heading(doc, "The sentence to use", 3)
+    quote(
+        doc,
+        "“I built the LLMOps discipline end to end — tracking, prompt and "
+        "model versioning, an agent evaluation harness with a committed "
+        "regression baseline, guardrails, human-in-the-loop gates and full "
+        "trace observability. It runs on local MLflow today. The Databricks "
+        "target is designed against rather than deployed: the repository, "
+        "feature-store and model-registry interfaces all have their Databricks "
+        "implementations declared, and the migration is a config change plus "
+        "four class bodies, not a rewrite. I'd rather show you the seam than "
+        "claim the cluster.”",
+    )
+    para(
+        doc,
+        "That answer does two things at once. It is accurate, and it demonstrates "
+        "the thing a Principal role actually cares about: that you know where "
+        "the abstraction boundaries are and can say what a migration costs.",
+    )
+
+    heading(doc, "The LLMOps surface, mapped", 2)
+    table(
+        doc,
+        [
+            ["LLMOps concern", "Built (Stage 1, running)", "Databricks target", "Cost to move"],
+            [
+                "Experiment tracking",
+                "MLflow runs per model family, params + metrics + artifacts",
+                "Databricks MLflow",
+                "`ML__TRACKING_URI=databricks`",
+            ],
+            [
+                "Model versioning",
+                "`ModelRegistry` ABC, `ML__MODEL_STAGE=Production`",
+                "Unity Catalog registry",
+                "one class body",
+            ],
+            [
+                "Model governance",
+                "`load()` must refuse a model below approved stage",
+                "UC grants + stage gates",
+                "same contract, enforced by the platform",
+            ],
+            [
+                "Model serving",
+                "in-process, lazy-loaded",
+                "Databricks Model Serving",
+                "one class body; deps leave the API image",
+            ],
+            [
+                "Prompt versioning",
+                "`prompts/<agent>/<version>.md` + registry",
+                "unchanged — files ship with the wheel",
+                "nothing",
+            ],
+            [
+                "Agent evaluation",
+                "20-question golden set, 4 dimensions, per-provider baselines",
+                "same harness as a Workflow job",
+                "job definition only",
+            ],
+            [
+                "Guardrails",
+                "budget (4 limits) + output validation",
+                "unchanged — application logic",
+                "nothing",
+            ],
+            [
+                "Human-in-the-loop",
+                "`interrupt_before` + checkpointer + threshold",
+                "same graph, durable checkpointer",
+                "checkpointer backend",
+            ],
+            [
+                "Observability",
+                "structlog JSON, trace_id, token + cache accounting",
+                "+ MLflow traces, Lakehouse Monitoring",
+                "sink configuration",
+            ],
+            [
+                "Lineage",
+                "`FeatureSetMetadata` JSON, dataset_version in every result",
+                "Unity Catalog lineage, automatic",
+                "strictly better on the platform",
+            ],
+        ],
+        [1.35, 2.05, 1.55, 1.45],
+    )
+    para(
+        doc,
+        "The right-hand column is the argument. **No row requires editing a "
+        "model, a feature definition, a tool or an agent.** That is what it means "
+        "to say the seams hold, and it is checkable rather than asserted.",
+    )
+
+    heading(doc, "What is genuinely built, in detail", 2)
+
+    heading(doc, "1. Experiment tracking and reproducibility", 3)
+    para(
+        doc,
+        "Three model families log to MLflow through their own tracking modules — "
+        "`ml/baseline/tracking.py`, `ml/forecasting/tracking.py`, "
+        "`ml/promo_uplift/tracking.py`, sharing `ml/base.py`. What gets logged is "
+        "the interesting part:",
+    )
+    bullets(
+        doc,
+        [
+            "**Params** — every hyperparameter, plus the config hash, so a run "
+            "is reproducible from its record rather than from someone's memory.",
+            "**Metrics** — the measured score *and* the noise floor it should be "
+            "read against. A WMAPE of 40.4% logged without the 35.0% floor beside "
+            "it is a number that will be misread later.",
+            "**Artifacts** — the diagnostic frames: per-event detail, covariate "
+            "balance, method comparison, placebo results.",
+            "**Assumptions** — the uplift run logs its causal assumptions as a "
+            "JSON artifact. A causal estimate whose assumptions are not recorded "
+            "alongside it is not reproducible in any sense that matters.",
+        ],
+    )
+    para(
+        doc,
+        "`configure_mlflow()` reads `ML__TRACKING_URI` and nothing else. Setting "
+        "it to `databricks` is the entire change on the tracking side — which is "
+        "exactly the demonstration to offer if someone doubts the seam.",
+    )
+
+    heading(doc, "2. Prompt versioning — and why it is not in Python", 3)
+    para(
+        doc,
+        "Prompts live at `prompts/<agent>/<version>.md`, loaded by "
+        "`load_prompt(name, version)`. Four agents, `v1` each: supervisor, "
+        "critic, recommendation, root_cause.",
+    )
+    para(
+        doc,
+        "**They are files, not string constants.** A prompt in a Python module "
+        "produces a diff nobody can read and a change nobody can attribute. The "
+        "version travels into the trace as `prompt_version`, so a result can "
+        "always be traced back to the exact prompt that produced it — which is "
+        "the only way to answer “did that prompt edit make things worse” "
+        "with evidence rather than impression.",
+    )
+    flag(
+        doc,
+        "The structure was committed at the first agent commit, not retrofitted. "
+        "Retrofitting prompt versioning means touching every call site.",
+        GOOD,
+    )
+
+    heading(doc, "3. Agent evaluation as a regression gate", 3)
+    para(
+        doc,
+        "This is the part most LLMOps stories are missing, and it is covered in "
+        "full in Chapter 12. In LLMOps terms:",
+    )
+    bullets(
+        doc,
+        [
+            "A **golden set derived from ground truth**, not hand-written — the "
+            "right answer exists independently of the thing being graded.",
+            "**Per-provider committed baselines** in `evaluation/baselines/`. "
+            "`compare_to_baseline` **refuses** to compare across providers, "
+            "because grading a Claude run against the keyword floor would report "
+            "noise as improvement.",
+            "**A regression gate**: `evaluate-agent` exits non-zero when a "
+            "headline number falls more than 0.02 below baseline. That tolerance "
+            "exists because a check that fires on noise gets ignored.",
+            "**A measured cost model**: one full run is 80 LLM calls — 40 on the "
+            "planner model, 40 on the worker — before any re-planning.",
+        ],
+    )
+    para(
+        doc,
+        "On Databricks this becomes a Workflow job on a schedule, writing its "
+        "report to a Delta table so the score has history. The harness does not "
+        "change; only where it runs and where the report lands.",
+    )
+
+    heading(doc, "4. Guardrails, in two layers", 3)
+    para(
+        doc,
+        "**Budget** — four independent limits (iterations, tool calls, tokens, "
+        "wall clock), because they fail differently: a token cap does not catch a "
+        "fast infinite loop, and an iteration cap does not catch one enormous "
+        "call.",
+    )
+    para(
+        doc,
+        "**Output validation** — every numeral in the final recommendation is "
+        "matched against the tool results in state. This is the hallucination "
+        "control that is architectural rather than prompted, and it is the single "
+        "strongest thing to demo. See Chapter 11 for the two bugs found by "
+        "running it.",
+    )
+
+    heading(doc, "5. Human-in-the-loop and the approval gate", 3)
+    para(
+        doc,
+        "`interrupt_before` on the recommendation node with a checkpointer, "
+        "firing when projected impact crosses "
+        "`AGENT__HUMAN_APPROVAL_THRESHOLD` — applied to the **magnitude**, "
+        "because recommending you give up a million is exactly as consequential "
+        "as recommending you chase it.",
+    )
+    para(
+        doc,
+        "There is a second, quieter gate on the model side: `ModelRegistry.load()` "
+        "is contractually required to refuse a model that is not at the approved "
+        "stage, raising `ModelNotApprovedError`. On Unity Catalog that stops "
+        "being a convention the implementation has to honour and becomes a grant "
+        "the platform enforces.",
+    )
+
+    heading(doc, "6. Observability", 3)
+    para(
+        doc,
+        "structlog with JSON output and a `trace_id` propagated through "
+        "contextvars, so every log line in one investigation correlates — "
+        "including lines emitted deep inside tool execution.",
+    )
+    table(
+        doc,
+        [
+            ["Logged on every LLM call", "Never logged"],
+            ["model, stop_reason", "message content"],
+            ["input / output tokens", "business data"],
+            ["cache read / write tokens", "prompt text"],
+            ["tool call count", "tool result payloads"],
+            ["refusal category and explanation", ""],
+        ],
+        [3.2, 3.2],
+    )
+    para(
+        doc,
+        "The right-hand column is a deliberate constraint, not an oversight: a "
+        "log line is the easiest place for business data to escape. Cache tokens "
+        "are on the left because they are what make a long investigation "
+        "affordable, so they have to be visible in the usage record.",
+    )
+
+    heading(doc, "The Databricks target, concretely", 2)
+    para(doc, "Unity Catalog layout, from `docs/databricks_migration.md`:")
+    code(
+        doc,
+        """
+catalog: cpg_revenue_intelligence
+├── bronze     raw ingestion, audit columns
+├── silver     validated, deduplicated, quarantined
+├── gold       business-ready star schema     <- DataRepository reads here
+├── features   feature tables                 <- FeatureRepository reads here
+└── ml         registered models              <- ModelRegistry reads here
+""",
+    )
+    para(
+        doc,
+        "Models register as `<catalog>.ml.<name>`, so **model access is governed "
+        "by the same grants as the data**. That is the argument for Unity Catalog "
+        "over a standalone registry: one governance surface rather than two that "
+        "drift.",
+    )
+    para(
+        doc,
+        "Two things genuinely get *better* on the platform rather than merely "
+        "moving:",
+    )
+    bullets(
+        doc,
+        [
+            "**Point-in-time correctness.** Locally, as-of correctness answers "
+            "“what had happened by date D”. Delta time travel also "
+            "answers “what did we believe on date D” — reconstructing "
+            "rows that were later corrected. Restated sales and back-dated "
+            "promotions are exactly where that matters, and the Parquet layer "
+            "cannot express it because it has no history of its own history.",
+            "**Feature lineage.** `fe.log_model` records feature lookups "
+            "automatically, so the model-to-feature-version link stops being a "
+            "convention someone has to maintain.",
+        ],
+    )
+
+    heading(doc, "Interview Questions", 2)
+
+    question(doc, "BASIC", "What does LLMOps mean on this project?")
+    para(
+        doc,
+        "Everything that makes a non-deterministic system operable: knowing which "
+        "prompt produced a result, being able to tell whether a change made it "
+        "better, bounding what it can spend, gating what it can act on without a "
+        "human, and being able to reconstruct any single investigation from its "
+        "trace. Concretely: MLflow tracking, versioned prompt files, a golden-set "
+        "regression gate, four budget limits, output validation, an approval "
+        "interrupt and correlated JSON logging.",
+    )
+
+    question(doc, "INTERMEDIATE", "How do you know a prompt change did not make things worse?")
+    flag(doc, "This is the question the whole evaluation chapter exists to answer.")
+    para(
+        doc,
+        "Run the golden set and compare to the committed baseline for that "
+        "provider. The command exits non-zero if any headline number drops more "
+        "than 0.02. Without that, a prompt change is a matter of opinion — and "
+        "prompt quality is the dominant variable in agent behaviour, so opinion "
+        "is not good enough.",
+    )
+    para(
+        doc,
+        "The honest addendum: the baselines committed today are for the offline "
+        "stub. A Claude baseline is the obvious next thing and has not been "
+        "recorded, so I would not quote a model score.",
+    )
+
+    question(doc, "INTERMEDIATE", "Why local MLflow rather than Databricks MLflow?")
+    para(
+        doc,
+        "Because nothing about the *practice* differs, and Stage 1 had no cluster. "
+        "`configure_mlflow()` reads `ML__TRACKING_URI`; pointing it at "
+        "`databricks` is the whole change. Building against the local store first "
+        "meant the tracking code got written and exercised on every training run "
+        "rather than waiting on infrastructure — and the thing that would have "
+        "been hard to retrofit is *what* gets logged, not where it goes.",
+    )
+
+    question(doc, "SENIOR", "Walk me through deploying this to Databricks.")
+    para(doc, "In order, and the order matters because each step de-risks the next:")
+    bullets(
+        doc,
+        [
+            "**Land the data.** Bronze/Silver/Gold in Unity Catalog, with the "
+            "Pandera contracts becoming Delta constraints plus Lakehouse "
+            "Monitoring so the checks move closer to the data.",
+            "**Implement `DatabricksDataRepository`.** One class. Every leakage "
+            "test and every model test runs unchanged against it — that is the "
+            "acceptance criterion, and it is why those tests were written to the "
+            "interface rather than to DuckDB.",
+            "**Port `features/engineering` to PySpark**, same shape, and register "
+            "feature tables with `timeseries_columns` so the point-in-time join "
+            "becomes native rather than hand-rolled.",
+            "**Retrain under Databricks MLflow**, register to "
+            "`cpg_revenue_intelligence.ml`, and put the stage gate behind UC "
+            "grants.",
+            "**Move serving behind Model Serving endpoints**, which takes the "
+            "model dependencies out of the API image and lets model and "
+            "application scale independently.",
+            "**Schedule the golden-set evaluation as a Workflow**, writing to "
+            "Delta so the score gets history rather than being a number someone "
+            "ran once.",
+        ],
+    )
+    para(
+        doc,
+        "What does *not* move: feature definitions, data contracts, the "
+        "availability classes, dataset builders, and the leakage tests. That list "
+        "is the actual deliverable of the seam work — everything in it would "
+        "otherwise have been rewritten during migration.",
+    )
+
+    question(doc, "SENIOR", "Your CV says you implemented this on Databricks. Did you?")
+    flag(doc, "Answer this one straight. Hedging here is worse than the gap.")
+    para(
+        doc,
+        "“I implemented the LLMOps layer; it runs on local MLflow, not on "
+        "Databricks. The Databricks implementations are declared with their "
+        "interfaces and their migration mapped, and I can show you the document "
+        "and the class stubs — but they are not deployed, and I would not claim "
+        "a cluster I have not run. What I *can* show you is that the seam holds: "
+        "the same tests pass against the interface, so the migration is bounded "
+        "work rather than a discovery exercise.”",
+    )
+    para(
+        doc,
+        "Then offer the demo. A working local system with a measured evaluation "
+        "harness beats a claimed cloud deployment that cannot be shown, and most "
+        "interviewers know it.",
+    )
+
+    heading(doc, "Common Wrong Answers", 2)
+    bullets(
+        doc,
+        [
+            "“We use MLflow for LLMOps.” MLflow tracks experiments. It "
+            "does not version your prompts, bound your agent's spend, or tell you "
+            "a prompt change regressed tool selection. Name the layers.",
+            "“Guardrails means a content filter.” Here it means a budget, "
+            "a numeral check against tool results, and an approval interrupt. "
+            "Content filtering is the vendor's job.",
+            "“The evaluation score is 0.83.” That is the *keyword floor* "
+            "on the stub provider. Quoting it as a model score is the single "
+            "easiest way to get caught.",
+            "“Agentic RAG is implemented.” It is not. `VectorStore` is an "
+            "interface with no corpus behind it, and that was a decision — every "
+            "number comes from a model over structured data.",
+        ],
+    )
+    page_break(doc)
+
+
+def chapter_15(doc: Document) -> None:
+    heading(doc, "15 — The Defence: Limitations and Trade-offs", 1)
 
     heading(doc, "Mental Model", 2)
     lead(
@@ -1897,7 +2330,12 @@ def chapter_14(doc: Document) -> None:
         doc,
         [
             ["Absent", "Why, honestly"],
-            ["Databricks / Stage 2", "Designed with raising bodies. Not built."],
+            [
+                "Databricks / Stage 2",
+                "Designed with raising bodies and a mapped migration; not "
+                "deployed. The LLMOps practices are built and run on local "
+                "MLflow — see Chapter 14 for the exact line.",
+            ],
             [
                 "Agentic RAG",
                 "A decision, not a gap. There is no document corpus — every "
@@ -1984,6 +2422,7 @@ CHAPTERS = [
     chapter_12,
     chapter_13,
     chapter_14,
+    chapter_15,
 ]
 
 __all__ = ["CHAPTERS", "front_matter"]

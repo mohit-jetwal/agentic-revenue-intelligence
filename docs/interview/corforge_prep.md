@@ -89,6 +89,41 @@ Then, if asked what is missing:
 That second answer is the one that lands. Volunteering a result that
 undercuts your own system reads as someone who measures things.
 
+## Your CV bullet overclaims in exactly two places
+
+The bullet says: *"Implemented Agentic RAG and LLMOps — vector search,
+guardrails, human-in-the-loop controls, agent evaluation, prompt/model
+versioning and observability — on Databricks Lakehouse with Delta Lake, Unity
+Catalog, MLflow and Model Serving."*
+
+Most of that is true. Two parts are not, and both are findable in the repo in
+about ninety seconds:
+
+| Claim | Reality |
+|---|---|
+| "Agentic RAG … vector search" | `VectorStore` is an ABC. Both implementations raise. **No corpus exists.** |
+| "on Databricks Lakehouse" | Every Databricks class has a raising body. Nothing is deployed. |
+| guardrails, HITL, agent evaluation, prompt/model versioning, observability | **All real.** Running on local MLflow. |
+
+**The reframe that keeps it honest and still strong:** the LLMOps *practices*
+are built; the Databricks *substrate* is designed-against with the seams proven.
+Say "I built the LLMOps layer; it runs on local MLflow, and the
+Databricks target is designed against rather than deployed — the migration is a
+config change plus four class bodies, not a rewrite."
+
+Then offer the demo. A working local system with a measured evaluation harness
+beats a claimed cloud deployment nobody can see, and most interviewers know it.
+
+**Chapter 14 of the Project Bible is the full answer** — the LLMOps surface
+mapped column by column, what moves and what does not, and a scripted answer to
+"did you actually deploy this?"
+
+If you can amend the CV before the interview, change *"Implemented … on
+Databricks Lakehouse"* to *"…, with a Databricks Lakehouse migration
+designed against Delta Lake, Unity Catalog, MLflow and Model Serving"* and drop
+"Agentic RAG". You lose nothing an interviewer respects and remove the
+only two things that could unravel the conversation.
+
 ## What you must not do
 
 - Do not claim Azure anything. The project uses Anthropic Claude and is
@@ -96,6 +131,8 @@ undercuts your own system reads as someone who measures things.
 - Do not claim Neo4j, MCP, LangSmith or OpenTelemetry. None are present.
 - Do not claim agentic RAG. `VectorStore` is an interface with no document
   corpus behind it — it would be scaffolding for its own sake.
+- Do not say the Databricks side is deployed. It is designed, mapped and
+  stubbed. Say that instead — it is a better answer than it sounds.
 - Do not quote a Claude golden-set score. Only the stub baseline is committed;
   a Claude run costs money and has not been recorded.
 - Do not say the Docker image has been run. It is written and the lockfile
