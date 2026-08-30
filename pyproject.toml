@@ -106,7 +106,13 @@ ignore = [
 # The handbook generators are almost entirely prose and diagram coordinates.
 # Wrapping the string literals to 100 columns would break sentences across lines
 # and make the source harder to edit than the document it produces.
-"docs/**" = ["E501"]
+#
+# RUF001 flags characters that are ambiguous *in code* - a minus sign that is not
+# a hyphen, a multiplication sign that is not an x, curly quotes. In a document
+# meant to be printed and read they are the correct characters, and replacing
+# "-424%" with "-424%" or "20x" with "20x" would degrade the typography of the
+# artefact to satisfy a rule about source code.
+"docs/**" = ["E501", "RUF001", "RUF002", "RUF003"]
 "tests/models/**" = ["S101", "N803", "N806"]
 "tests/forecasting/**" = ["S101", "N803", "N806"]
 "tests/promo_uplift/**" = ["S101", "N803", "N806"]
